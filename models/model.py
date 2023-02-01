@@ -1,5 +1,3 @@
-from statistics import mode
-from turtle import forward
 import torch
 import torch.nn as nn
 import timm
