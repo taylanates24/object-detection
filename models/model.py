@@ -29,4 +29,14 @@ class TyNeck(nn.Module):
     def forward(self, x):
         
         pass
+
+
+class TyHead(nn.Module):
+    def __init__(self) -> None:
+        super(TyHead, self).__init__()
     
+        pass
+    
+    def forward(self, x):
+        
+        pass
