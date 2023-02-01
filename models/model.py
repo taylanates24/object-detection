@@ -1,4 +1,5 @@
 from statistics import mode
+from turtle import forward
 import torch
 import torch.nn as nn
 import timm
@@ -23,5 +24,9 @@ class TyNeck(nn.Module):
     def __init__(self) -> None:
         super(TyNeck, self).__init__()
     
+        pass
+    
+    def forward(self, x):
+        
         pass
     
