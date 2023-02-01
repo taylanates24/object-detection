@@ -18,3 +18,10 @@ class TyNet(nn.Module):
         x = self.neck(x)
         x = self.head(x)
         return x
+
+class TyNeck(nn.Module):
+    def __init__(self) -> None:
+        super(TyNeck, self).__init__()
+    
+        pass
+    
