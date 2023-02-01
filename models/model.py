@@ -5,7 +5,7 @@ import timm
 
 
 class TyNet(nn.Module):
-    def __init__(self, backbone='cspresnet50') -> None:
+    def __init__(self, backbone='cspdarknet53') -> None:
         super(TyNet, self).__init__()
         self.backbone = timm.create_model(backbone, pretrained=True, features_only=True).cuda()
         self.neck = nn.Identity()
