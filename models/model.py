@@ -38,3 +38,20 @@ class TyHead(nn.Module):
     def forward(self, x):
         
         pass
+    
+
+class CSPResSPPBlock(nn.Module):
+
+    def __init__(self) -> None:
+        super(CSPResSPPBlock, self).__init__()
+
+    pass
+
+
+    def forward(self, x):
+
+        pass
+
+
+
+
