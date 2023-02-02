@@ -7,8 +7,8 @@ import timm
 class TyNet(nn.Module):
     def __init__(self, backbone='cspdarknet53') -> None:
         super(TyNet, self).__init__()
-        self.backbone = timm.create_model(backbone, pretrained=True, features_only=True).cuda()
-        self.neck = nn.Identity()
+        self.backbone = timm.create_model(backbone, pretrained=True, features_only=True, out_indices=[3,4,5]).cuda()
+        self.neck = TyNeck()
         self.head = nn.Identity()
         
         
@@ -21,12 +21,40 @@ class TyNet(nn.Module):
 class TyNeck(nn.Module):
     def __init__(self) -> None:
         super(TyNeck, self).__init__()
-    
-        pass
+        self.conv_out = nn.Sequential(Conv(1024, 512, k_size=3, s=1, p=1), nn.Mish())
+        
+        self.conv_p5 = nn.Sequential(Conv(512,1024,1,1,0), nn.Mish())
+        self.conv_p4 = nn.Sequential(Conv(256,1024,1,1,0), nn.Mish())
+        self.basic_block = ScalableCSPResBlock(1024)
+        self.upsample = nn.Upsample(scale_factor=2.0)
+        self.act = nn.Mish()
+        
+
     
     def forward(self, x):
+        p4, p5, p6 = x
         
-        pass
+        out_6 = self.conv_out(p6)
+        f6 = self.upsample(p6)
+        p5 = self.conv_p5(p5)
+        
+        f5 = p5 + f6
+        
+        out_5 = self.basic_block(self.basic_block(f5))
+        
+        f5 = self.upsample(f5)
+        p4 = self.conv_p4(p4)
+        
+        f4 = f5 + p4
+        out_4 = self.basic_block(self.basic_block(self.basic_block(f4)))
+        
+        out_5 = self.conv_out(out_5)
+        
+        out_4 = self.conv_out(out_4)
+        
+        
+        return out_4, out_5, out_6
+        
 
 
 class TyHead(nn.Module):
@@ -109,4 +137,18 @@ class BasicBlock(nn.Module):
         return out
 
 
+class Conv(nn.Module):
+    def __init__(self, in_ch, out_ch, k_size=3, s=1, p=0, upsample=False, act=nn.Mish()) -> None:
+        super(Conv, self).__init__()
+        self.conv = nn.Conv2d(in_channels=in_ch, out_channels=out_ch, kernel_size=k_size, stride=s, padding=p)
+        self.bn = nn.BatchNorm2d(num_features=out_ch)
+        if upsample:
+            self.upsample = nn.Upsample(scale_factor=2.0)
+            self.act = act
+        self.is_upsample = upsample
+        
+    def forward(self, x):
+        if self.is_upsample:
+            return self.upsample(self.act(self.bn(self.conv(x))))
+        return self.bn(self.conv(x))
 
