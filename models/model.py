@@ -7,7 +7,7 @@ import timm
 class TyNet(nn.Module):
     def __init__(self, backbone='cspdarknet53') -> None:
         super(TyNet, self).__init__()
-        self.backbone = timm.create_model(backbone, pretrained=True, features_only=True, out_indices=[3,4,5]).cuda()
+        self.backbone = timm.create_model(backbone, pretrained=True, features_only=True, out_indices=[3,4,5])
         self.neck = TyNeck()
         self.head = nn.Identity()
         
@@ -19,41 +19,46 @@ class TyNet(nn.Module):
         return x
 
 class TyNeck(nn.Module):
-    def __init__(self) -> None:
+    def __init__(self, layers=[256,512,1024], out_size=256, procedure=[2,3]) -> None:
         super(TyNeck, self).__init__()
-        self.conv_out = nn.Sequential(Conv(1024, 512, k_size=3, s=1, p=1), nn.Mish())
         
-        self.conv_p5 = nn.Sequential(Conv(512,1024,1,1,0), nn.Mish())
-        self.conv_p4 = nn.Sequential(Conv(256,1024,1,1,0), nn.Mish())
-        self.basic_block = ScalableCSPResBlock(1024)
-        self.upsample = nn.Upsample(scale_factor=2.0)
-        self.act = nn.Mish()
+        self.out_layer = Conv(in_ch=layers[-1], out_ch=out_size, k_size=3, s=1, p=1)
+
+        module_dict = {}
+        for i in layers[:-1]:
+            module_dict[str(i)] = Conv(in_ch=i, out_ch=layers[-1], k_size=1, s=1, p=0)
+            
+        self.upconv_dict = nn.ModuleDict(module_dict)
+
+        self.layer1 = nn.Sequential(*[ScalableCSPResBlock(layers[-1])] * procedure[0])
+        self.layer2 = nn.Sequential(*[ScalableCSPResBlock(layers[-1])] * procedure[1])
+        self.layers = nn.ModuleList([self.layer1, self.layer2])
+        self.upsample = nn.Upsample(scale_factor=2.0, mode='bilinear')
         
+        self.act = nn.SiLU()
+    
+    def upsample_add(self, x, y):
+
+        y = self.act(self.upconv_dict[str(y.shape[1])](y))
+
+        return self.upsample(x) + y 
 
     
-    def forward(self, x):
-        p4, p5, p6 = x
+    def forward(self, inputs):
+
+        x = inputs.pop(-1)
+
+        mids = [x]
+        for layer in self.layers:
+            x = self.upsample_add(x, inputs.pop(-1))
+            x = layer(x)
+            mids.append(x)
         
-        out_6 = self.conv_out(p6)
-        f6 = self.upsample(p6)
-        p5 = self.conv_p5(p5)
-        
-        f5 = p5 + f6
-        
-        out_5 = self.basic_block(self.basic_block(f5))
-        
-        f5 = self.upsample(f5)
-        p4 = self.conv_p4(p4)
-        
-        f4 = f5 + p4
-        out_4 = self.basic_block(self.basic_block(self.basic_block(f4)))
-        
-        out_5 = self.conv_out(out_5)
-        
-        out_4 = self.conv_out(out_4)
-        
-        
-        return out_4, out_5, out_6
+        outs = []
+        for mid in mids:
+            outs.append(self.out_layer(mid))
+
+        return outs
         
 
 
