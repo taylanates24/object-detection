@@ -4,11 +4,11 @@ import timm
 
 
 class TyNet(nn.Module):
-    def __init__(self, backbone='cspdarknet53') -> None:
+    def __init__(self, backbone='cspdarknet53', nc=80) -> None:
         super(TyNet, self).__init__()
         self.backbone = timm.create_model(backbone, pretrained=True, features_only=True, out_indices=[3, 4, 5])
         self.neck = TyNeck()
-        self.head = TyHead()
+        self.head = TyHead(nc=nc+5)
 
     def forward(self, x):
         x = self.backbone(x)
@@ -60,17 +60,20 @@ class TyNeck(nn.Module):
 
 
 class TyHead(nn.Module):
-    def __init__(self, in_ch=256, out_ch=255) -> None:
+    def __init__(self, in_ch=256, out_ch=255, nc=85, anchors=[[ 10.,  14.], [ 23.,  27.], [ 37.,  58.],[ 81.,  82.], [135., 169.], [344., 319.]]) -> None:
         super(TyHead, self).__init__()
-        self.conv = Conv(in_ch=in_ch, out_ch=out_ch, k_size=1, s=1, p=0)
-        self.act = nn.SiLU()
-        
+        self.conv = nn.Conv2d(in_channels=in_ch, out_channels=out_ch, kernel_size=1, stride=1, padding=0)
 
-    def forward(self, x):
-        x = self.act(self.conv(x))
+        self.na = len(anchors) // 2
+        self.nc = nc
+        self.anchors = torch.tensor(anchors).cuda()
         
-        return x
-        
+    def forward(self, inputs):
+        for i in range(len(inputs)):
+            inputs[i] = self.conv(inputs[i])
+            bs, _, ny, nx = inputs[i].shape
+            inputs[i] = inputs[i].view(bs, self.na, self.nc, ny, nx).permute(0, 1, 3, 4, 2).contiguous()
+
 
 
 class ScalableCSPResBlock(nn.Module):
