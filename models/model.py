@@ -8,7 +8,7 @@ class TyNet(nn.Module):
         super(TyNet, self).__init__()
         self.backbone = timm.create_model(backbone, pretrained=True, features_only=True, out_indices=[3, 4, 5])
         self.neck = TyNeck()
-        self.head = nn.Identity()
+        self.head = TyHead()
 
     def forward(self, x):
         x = self.backbone(x)
@@ -60,13 +60,17 @@ class TyNeck(nn.Module):
 
 
 class TyHead(nn.Module):
-    def __init__(self) -> None:
+    def __init__(self, in_ch=256, out_ch=255) -> None:
         super(TyHead, self).__init__()
-
-        pass
+        self.conv = Conv(in_ch=in_ch, out_ch=out_ch, k_size=1, s=1, p=0)
+        self.act = nn.SiLU()
+        
 
     def forward(self, x):
-        pass
+        x = self.act(self.conv(x))
+        
+        return x
+        
 
 
 class ScalableCSPResBlock(nn.Module):
