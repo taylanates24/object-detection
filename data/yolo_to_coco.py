@@ -23,7 +23,7 @@ if __name__ == '__main__':
     coco_names = open(args.coco_names).read()
     coco_names = coco_names.split('\n')[:-1]
     
-    coco_ann = {
+    coco_annotations = {
         "info": {},
         'images': [],
         'annotations': [],
@@ -31,11 +31,30 @@ if __name__ == '__main__':
     }
     
     for i, category in enumerate(coco_names):
-        coco_ann['categories'].append(
+        coco_annotations['categories'].append(
             {
                 'id': i + 1,
                 'name': category
             }
         )
         
+
+for an in sorted(os.listdir(args.yolo_ann)):
+    ann_id = 1
+    img_id = an.split('.')[0]
+    img_name = img_id + '.jpg'
+    img = cv2.imread(os.path.join(args.yolo_img, img_name))
+    
+    if not isinstance(img, (np.ndarray, np.generic)):
+        continue
+    h, w, c = img.shape
+    
+    coco_annotations['images'].append(
+        {
+            'file_name': img_name,
+            'height': h,
+            'width': w,
+            'id': int(img_id)
+            }
+        )
         
