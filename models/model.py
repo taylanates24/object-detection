@@ -4,7 +4,7 @@ import timm
 
 
 class TyNet(nn.Module):
-    def __init__(self, backbone='cspdarknet53', nc=80) -> None:
+    def __init__(self, backbone='mixnet_xl.ra_in1k', nc=80) -> None:
         super(TyNet, self).__init__()
         self.backbone = timm.create_model(backbone, pretrained=True, features_only=True)
         x=torch.randn(1,3,224,224)
