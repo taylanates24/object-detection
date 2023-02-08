@@ -6,12 +6,17 @@ import timm
 class TyNet(nn.Module):
     def __init__(self, backbone='cspdarknet53', nc=80) -> None:
         super(TyNet, self).__init__()
-        self.backbone = timm.create_model(backbone, pretrained=True, features_only=True, out_indices=[3, 4, 5])
-        self.neck = TyNeck()
-        self.head = TyHead(nc=nc+5)
-
+        self.backbone = timm.create_model(backbone, pretrained=True, features_only=True)
+        x=torch.randn(1,3,224,224)
+        out=self.backbone(x)
+        layers = [x.shape[1] for x in out][-3:]
+        
+        #avail_pretrained_models = timm.list_models(pretrained=True)
+        self.neck = TyNeck(layers=layers)
+        self.head = TyHead(nc=nc+5, num_outs=len(layers))
+        
     def forward(self, x):
-        x = self.backbone(x)
+        x = self.backbone(x)[-3:]
         x = self.neck(x)
         x = self.head(x)
         return x
@@ -60,13 +65,12 @@ class TyNeck(nn.Module):
 
 
 class TyHead(nn.Module):
-    def __init__(self, in_ch=256, out_ch=255, nc=85, anchors=[[ 10.,  14.], [ 23.,  27.], [ 37.,  58.],[ 81.,  82.], [135., 169.], [344., 319.]]) -> None:
+    def __init__(self, in_ch=256, out_ch=255, nc=85) -> None:
         super(TyHead, self).__init__()
         self.conv = nn.Conv2d(in_channels=in_ch, out_channels=out_ch, kernel_size=1, stride=1, padding=0)
 
-        self.na = len(anchors) // 2
+
         self.nc = nc
-        self.anchors = torch.tensor(anchors).cuda()
         
     def forward(self, inputs):
         for i in range(len(inputs)):
