@@ -19,4 +19,21 @@ if __name__ == '__main__':
     
     args = parser.parse_args()
     
+
+    coco_names = open('/workspaces/object-detection/coco.names').read()
+    coco_names = coco_names.split('\n')[:-1]
     
+    new_coco_ann = {
+        "info": {},
+        'images': [],
+        'annotations': [],
+        'categories': []
+    }
+    
+    for i, category in enumerate(coco_names):
+        new_coco_ann['categories'].append(
+            {
+                'id': i + 1,
+                'name': category
+            }
+        )
