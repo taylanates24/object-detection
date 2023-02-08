@@ -5,6 +5,9 @@ import cv2
 import numpy as np
 import argparse
 import os
+import logging
+from tqdm import tqdm
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--yolo_annotations', type=str, 
@@ -44,13 +47,14 @@ if __name__ == '__main__':
         )
         
 
-    for annotations in sorted(os.listdir(args.yolo_annotations)):
+    for annotations in tqdm(sorted(os.listdir(args.yolo_annotations))):
         annotationsn_id = 1
         img_id = annotations.split('.')[0]
         img_name = img_id + '.jpg'
         img = cv2.imread(os.path.join(args.yolo_img, img_name))
         
         if not isinstance(img, (np.ndarray, np.generic)):
+            logging.warning('An annotation file was not found!')
             continue
         h, w, c = img.shape
         
@@ -95,5 +99,5 @@ if __name__ == '__main__':
         try:
             COCO(out_path)
         except:
-            print('An error occured!')
-        print(' The annotations successfully converted to COCO format.')
+            logging.error('An error occured!')
+        logging.critical(' The annotations successfully converted to COCO format.')
