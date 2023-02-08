@@ -39,6 +39,7 @@ if __name__ == '__main__':
     }
     
     for i, category in enumerate(coco_names):
+        
         coco_annotations['categories'].append(
             {
                 'id': i + 1,
@@ -48,18 +49,21 @@ if __name__ == '__main__':
         
 
     for annotations in tqdm(sorted(os.listdir(args.yolo_annotations))):
-        annotationsn_id = 1
+        
+        annotations_id = 1
         img_id = annotations.split('.')[0]
         img_name = img_id + '.jpg'
         img = cv2.imread(os.path.join(args.yolo_img, img_name))
         
         if not isinstance(img, (np.ndarray, np.generic)):
-            logging.warning('An annotation file was not found!')
+            
+            logging.warning('An image file of an annotation was not found!')
             continue
+        
         h, w, c = img.shape
         
         coco_annotations['images'].append(
-            {
+                {
                 'file_name': img_name,
                 'height': h,
                 'width': w,
@@ -74,19 +78,22 @@ if __name__ == '__main__':
             values = bbox.split(' ')
             
             coco_annotations['annotations'].append(
-                {
+                    {
                     'image_id': int(img_id),
                     'bbox': [(float(values[1]) - (float(values[3]) / 2)) * w, 
-                                (float(values[2]) - (float(values[4]) / 2)) * h,
-                                float(values[3]) * w, 
-                                float(values[4]) * h
+                             (float(values[2]) - (float(values[4]) / 2)) * h,
+                             float(values[3]) * w, 
+                             float(values[4]) * h
                     ],
                     'category_id': int(values[0]),
-                    'id': annotationsn_id
-                }
+                    'id': annotations_id
+            }
             )
+            
     out_path = os.path.join(args.yolo_annotations, 'coco_annotations')
+    
     if not os.path.isdir(out_path):
+        
         os.mkdir(out_path)
         
     out_path = os.path.join(out_path, args.out_file_name)
@@ -96,6 +103,7 @@ if __name__ == '__main__':
         outfile.write(new_coco_ann_file)
 
     if args.check:
+        
         try:
             COCO(out_path)
         except:
