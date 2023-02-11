@@ -112,3 +112,14 @@ class RandomAffine:
         #aug = iaa.ShearY((-20, 20))
         #
         pass
+    
+    
+class CopyPast:
+    
+    def __init__(self) -> None:
+        pass
+    
+    
+    def __call__(self, img, bboxes):
+        #https://github.com/conradry/copy-paste-aug/blob/main/copy_paste.py
+        pass
