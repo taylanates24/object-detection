@@ -94,3 +94,21 @@ class ContrastShift:
         bbs = BoundingBoxesOnImage(bbox_aug, shape=(img_heigth, img_width, 3))'''
         
         
+class RandomAffine:
+    
+    def __init__(self) -> None:
+        pass
+    
+    
+    def __call__(self, img, bboxes):
+        #aug = iaa.Affine(scale=(0.5, 1.5))
+        #aug = iaa.Affine(translate_percent={"x": (-0.2, 0.2), "y": (-0.2, 0.2)})
+        #aug = iaa.Affine(rotate=(-45, 45))
+        #aug = iaa.Affine(shear=(-16, 16))
+        #aug = iaa.TranslateX(percent=(-0.1, 0.1))
+        #aug = iaa.TranslateY(percent=(-0.1, 0.1))
+        #aug = iaa.Rotate((-45, 45))
+        #aug = iaa.ShearX((-20, 20))
+        #aug = iaa.ShearY((-20, 20))
+        #
+        pass
