@@ -76,8 +76,21 @@ class MotionBlur:
     def __call__(self, img, bboxes):
         #aug = iaa.MotionBlur(k=15)
         pass
+    
+    
+class ContrastShift:
+    
+    def __init__(self) -> None:
+        pass
+    
+    
+    def __call__(self, img, bboxes):
+        #aug = iaa.GammaContrast((0.5, 2.0))
+        pass
 
 '''     bbox_aug = []
         for bbox in bboxes:
             bbox_aug.append(BoundingBox(x1=bbox[0], y1=bbox[1], x2=bbox[0]+bbox[2], y2=bbox[1]+bbox[3]))
         bbs = BoundingBoxesOnImage(bbox_aug, shape=(img_heigth, img_width, 3))'''
+        
+        
