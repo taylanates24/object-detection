@@ -47,10 +47,10 @@ if __name__ == '__main__':
             }
         )
         
-
+    annotations_id = 1
     for annotations in tqdm(sorted(os.listdir(args.yolo_annotations))):
         
-        annotations_id = 1
+        
         img_id = annotations.split('.')[0]
         img_name = img_id + '.jpg'
         img = cv2.imread(os.path.join(args.yolo_img, img_name))
@@ -89,7 +89,8 @@ if __name__ == '__main__':
                     'id': annotations_id
             }
             )
-            
+            annotations_id += 1
+       
     out_path = os.path.join(args.yolo_annotations, 'coco_annotations')
     
     if not os.path.isdir(out_path):
