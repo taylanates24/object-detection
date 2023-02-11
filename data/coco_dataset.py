@@ -20,7 +20,7 @@ class CustomDataset(Dataset):
         self.augment = augment
         self.coco = COCO(self.annotation_path)
         self.image_paths = sorted(os.listdir(self.image_path))
-        self.ids = list(self.coco.imgs.keys())
+        self.ids = sorted(list(self.coco.imgs.keys()))
         self.image_size = image_size
         if self.normalize:
             mean, stddev = self.get_statistics()
@@ -42,13 +42,21 @@ class CustomDataset(Dataset):
     
     def __getitem__(self, index):
         img, ratio, padding_w, padding_h = self.load_image(index)
-
+        image_id = self.ids[index]
+        
+        labels = self.load_labels(image_id=image_id,
+                                  img_heigth=img.shape[0], 
+                                  img_width=img.shape[1], 
+                                  padh=padding_h, 
+                                  padw=padding_w, 
+                                  ratio=ratio,
+                                  img= img)
         if not self.normalize:
             img = img / 255
             
-        img_tensor = self.transform(img) 
+        img = self.transform(img) 
  
-        return img_tensor
+        return img, labels
     
     
     def load_image(self, index):
@@ -56,7 +64,7 @@ class CustomDataset(Dataset):
         img_path = self.image_paths[index]
         img = cv2.imread(os.path.join(self.image_path, img_path))
         height, width = img.shape[:2]
-        ratio = self.image_size / max(height, width)
+        ratio = self.image_size / max(height, width)            
         
         if ratio != 1:
             
@@ -65,8 +73,34 @@ class CustomDataset(Dataset):
         if img.shape[0] != img.shape[1]:
             
             img, padding_w, padding_h = self.letter_box(img=img, size=self.image_size)
-            
+
+
         return img, ratio, padding_w, padding_h
+        
+    def load_labels(self, image_id, img_heigth, img_width, padh, padw, ratio, img):
+        
+        annotations = self.coco.imgToAnns[image_id]
+        
+        bboxes = []
+        category_ids = []
+        
+        for ann in annotations:
+            
+            bboxes.append(ann['bbox'])
+            category_ids.append(ann['category_id'])
+
+        bboxes = np.array(bboxes)
+        
+        bboxes[:, 0] = (bboxes[:, 0] * ratio + padw) / img_width
+        bboxes[:, 1] = (bboxes[:, 1] * ratio + padh) / img_heigth
+        bboxes[:, 2] = (bboxes[:, 2] * ratio) / img_width
+        bboxes[:, 3] = (bboxes[:, 3] * ratio) / img_heigth
+
+        category_ids = np.array(category_ids)
+        labels = np.concatenate((np.expand_dims(category_ids, 1), bboxes),1)
+
+        return labels
+        
         
         
         
