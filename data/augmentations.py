@@ -33,4 +33,14 @@ class SaturationShift:
         #aug = iaa.AddToSaturation((-50, 50))
         pass
     
+class HueShift:
+    
+    def __init__(self) -> None:
+        pass
+    
+    
+    def __call__(self, img, bboxes):
+        #aug = iaa.AddToHue((-50, 50))
+        pass
+    
     
