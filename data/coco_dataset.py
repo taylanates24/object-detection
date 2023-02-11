@@ -8,7 +8,7 @@ import os
 import cv2
 class CustomDataset(Dataset):
 
-    def __init__(self, image_path, annotation_path, normalize=True, augment=False) -> None:
+    def __init__(self, image_path, annotation_path, image_size=640, normalize=False, augment=False) -> None:
         super(CustomDataset, self).__init__()
         
         self.image_root = os.path.join('/', *image_path.split('/')[:-1])
@@ -19,13 +19,14 @@ class CustomDataset(Dataset):
         self.coco = COCO(self.annotation_path)
         self.image_paths = sorted(os.listdir(self.image_path))
         self.ids = list(self.coco.imgs.keys())
-        
+        self.image_size = image_size
         if self.normalize:
             mean, stddev = self.get_statistics()
             self.transform = transforms.Compose([
                 transforms.ToTensor(),
                 transforms.Normalize(mean=mean, std=stddev)
             ])
+        
         else:
             self.transform = transforms.Compose([
                 transforms.ToTensor()
@@ -38,12 +39,35 @@ class CustomDataset(Dataset):
     
     
     def __getitem__(self, index):
-        
-        image_path = self.image_paths[index]
-        img = cv2.imread(os.path.join(self.image_path, image_path))
+        img = self.load_image(index)
+
         img_tensor = self.transform(img)
 
-     
+        return img_tensor
+    
+    
+    def load_image(self, index):
+        img_path = self.image_paths[index]
+        img = cv2.imread(os.path.join(self.image_path, img_path))
+        height, widht = img.shape[:2]
+        ratio = self.image_size / max(height, widht)
+        
+        if ratio != 1:
+            img = cv2.resize(img, (int(widht*ratio), int(height*ratio)), interpolation=cv2.INTER_CUBIC)
+        
+        if img.shape[0] != img.shape[1]:
+            img = self.letter_box(img=img, size=self.image_size)
+        return img
+        
+        
+    def letter_box(self, img, size):
+        
+        
+        
+        return img
+        
+        
+        
     def get_statistics(self):
         
         transform = transforms.Compose([
@@ -68,3 +92,6 @@ class CustomDataset(Dataset):
         std /= nb_samples
 
         return mean, std
+
+
+
