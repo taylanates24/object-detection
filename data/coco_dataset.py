@@ -6,6 +6,8 @@ from tqdm import tqdm
 from pycocotools.coco import COCO
 import os
 import cv2
+import numpy as np
+
 class CustomDataset(Dataset):
 
     def __init__(self, image_path, annotation_path, image_size=640, normalize=False, augment=False) -> None:
@@ -39,32 +41,51 @@ class CustomDataset(Dataset):
     
     
     def __getitem__(self, index):
-        img = self.load_image(index)
+        img, ratio, padding_w, padding_h = self.load_image(index)
 
-        img_tensor = self.transform(img)
-
+        if not self.normalize:
+            img = img / 255
+            
+        img_tensor = self.transform(img) 
+ 
         return img_tensor
     
     
     def load_image(self, index):
+        
         img_path = self.image_paths[index]
         img = cv2.imread(os.path.join(self.image_path, img_path))
-        height, widht = img.shape[:2]
-        ratio = self.image_size / max(height, widht)
+        height, width = img.shape[:2]
+        ratio = self.image_size / max(height, width)
         
         if ratio != 1:
-            img = cv2.resize(img, (int(widht*ratio), int(height*ratio)), interpolation=cv2.INTER_CUBIC)
+            
+            img = cv2.resize(img, (int(width*ratio), int(height*ratio)), interpolation=cv2.INTER_CUBIC)
         
         if img.shape[0] != img.shape[1]:
-            img = self.letter_box(img=img, size=self.image_size)
-        return img
+            
+            img, padding_w, padding_h = self.letter_box(img=img, size=self.image_size)
+            
+        return img, ratio, padding_w, padding_h
+        
         
         
     def letter_box(self, img, size):
         
+        box = np.full([size, size, img.shape[2]], 127)
+        h, w = img.shape[:2]
+        h_diff = size - h
+        w_diff = size - w
         
+        if h_diff:
+            
+            box[int(h_diff/2):int(img.shape[0]+h_diff/2), :img.shape[1], :] = img
+ 
+        else:
+            
+            box[:img.shape[0], int(w_diff/2):int(img.shape[1]+w_diff/2), :] = img
         
-        return img
+        return box, w_diff / 2, h_diff / 2
         
         
         
