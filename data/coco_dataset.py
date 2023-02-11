@@ -22,6 +22,7 @@ class CustomDataset(Dataset):
         self.image_paths = sorted(os.listdir(self.image_path))
         self.ids = sorted(list(self.coco.imgs.keys()))
         self.image_size = image_size
+        
         if self.normalize:
             mean, stddev = self.get_statistics()
             self.transform = transforms.Compose([
@@ -41,6 +42,7 @@ class CustomDataset(Dataset):
     
     
     def __getitem__(self, index):
+        
         img, ratio, padding_w, padding_h = self.load_image(index)
         image_id = self.ids[index]
         
@@ -51,6 +53,7 @@ class CustomDataset(Dataset):
                                   padw=padding_w, 
                                   ratio=ratio,
                                   img= img)
+        
         if not self.normalize:
             img = img / 255
             
@@ -91,10 +94,12 @@ class CustomDataset(Dataset):
 
         bboxes = np.array(bboxes)
         
-        bboxes[:, 0] = (bboxes[:, 0] * ratio + padw) / img_width
-        bboxes[:, 1] = (bboxes[:, 1] * ratio + padh) / img_heigth
-        bboxes[:, 2] = (bboxes[:, 2] * ratio) / img_width
-        bboxes[:, 3] = (bboxes[:, 3] * ratio) / img_heigth
+        bboxes = self.adjust_bboxes(bboxes=bboxes,
+                                    ratio=ratio,
+                                    img_width=img_width,
+                                    img_heigth=img_heigth,
+                                    padw=padw,
+                                    padh=padh)
         
         
         bboxes = self.x1y1_to_xcyc(bboxes=bboxes)
@@ -104,8 +109,16 @@ class CustomDataset(Dataset):
         return labels
         
         
+    def adjust_bboxes(self, bboxes, ratio, img_width, img_heigth, padw, padh):
         
+        bboxes[:, 0] = (bboxes[:, 0] * ratio + padw) / img_width
+        bboxes[:, 1] = (bboxes[:, 1] * ratio + padh) / img_heigth
+        bboxes[:, 2] = (bboxes[:, 2] * ratio) / img_width
+        bboxes[:, 3] = (bboxes[:, 3] * ratio) / img_heigth
         
+        return   bboxes
+    
+    
     def letter_box(self, img, size):
         
         box = np.full([size, size, img.shape[2]], 127)
