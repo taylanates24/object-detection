@@ -95,7 +95,9 @@ class CustomDataset(Dataset):
         bboxes[:, 1] = (bboxes[:, 1] * ratio + padh) / img_heigth
         bboxes[:, 2] = (bboxes[:, 2] * ratio) / img_width
         bboxes[:, 3] = (bboxes[:, 3] * ratio) / img_heigth
-
+        
+        
+        bboxes = self.x1y1_to_xcyc(bboxes=bboxes)
         category_ids = np.array(category_ids)
         labels = np.concatenate((np.expand_dims(category_ids, 1), bboxes),1)
 
@@ -148,5 +150,9 @@ class CustomDataset(Dataset):
 
         return mean, std
 
-
-
+    def x1y1_to_xcyc(self, bboxes):
+        
+        bboxes[:,:2] = bboxes[:,:2] + (bboxes[:, 2:] / 2)
+        
+        return bboxes
+ 
