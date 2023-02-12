@@ -7,6 +7,7 @@ from pycocotools.coco import COCO
 import os
 import cv2
 import numpy as np
+from augmentations import HorizontalFlip
 
 class CustomDataset(Dataset):
 
@@ -46,17 +47,33 @@ class CustomDataset(Dataset):
         img, ratio, padding_w, padding_h = self.load_image(index)
         image_id = self.ids[index]
         
-        labels = self.load_labels(image_id=image_id,
-                                  img_heigth=img.shape[0], 
-                                  img_width=img.shape[1], 
+        bboxes, category_ids = self.load_labels(image_id=image_id,
                                   padh=padding_h, 
                                   padw=padding_w, 
-                                  ratio=ratio,
-                                  img= img)
+                                  ratio=ratio)
+
+        if self.augmentations:
+            
+            bboxes = self.x1y1wh_to_xyxy(bboxes=bboxes)
+            img_data = {'img': img, 'bboxes':bboxes}
+            
+            for augment in self.augmentations:
+                img_data = augment(img_data)
+            
+            img, bboxes = img_data['img'], img_data['bboxes']
+
+            bboxes = self.xyxy_to_x1y1wh(bboxes=bboxes)
+
+        bboxes = self.x1y1_to_xcyc(bboxes=bboxes)
+        bboxes = self.normalize_bboxes(bboxes=bboxes, img_width=img.shape[1], img_height=img.shape[0])
+        
+        labels = np.concatenate((np.expand_dims(category_ids, 1), bboxes),1)
         
         if not self.normalize:
             img = img / 255
             
+            
+
         img = self.transform(img) 
  
         return img, labels
@@ -80,7 +97,9 @@ class CustomDataset(Dataset):
 
         return img, ratio, padding_w, padding_h
         
-    def load_labels(self, image_id, img_heigth, img_width, padh, padw, ratio, img):
+    def load_labels(self, image_id, padh, padw, ratio):
+        
+        
         
         annotations = self.coco.imgToAnns[image_id]
         
@@ -96,25 +115,22 @@ class CustomDataset(Dataset):
         
         bboxes = self.adjust_bboxes(bboxes=bboxes,
                                     ratio=ratio,
-                                    img_width=img_width,
-                                    img_heigth=img_heigth,
                                     padw=padw,
                                     padh=padh)
         
         
-        bboxes = self.x1y1_to_xcyc(bboxes=bboxes)
         category_ids = np.array(category_ids)
-        labels = np.concatenate((np.expand_dims(category_ids, 1), bboxes),1)
 
-        return labels
+            
+        return bboxes, category_ids
         
         
-    def adjust_bboxes(self, bboxes, ratio, img_width, img_heigth, padw, padh):
+    def adjust_bboxes(self, bboxes, ratio, padw, padh):
         
-        bboxes[:, 0] = (bboxes[:, 0] * ratio + padw) / img_width
-        bboxes[:, 1] = (bboxes[:, 1] * ratio + padh) / img_heigth
-        bboxes[:, 2] = (bboxes[:, 2] * ratio) / img_width
-        bboxes[:, 3] = (bboxes[:, 3] * ratio) / img_heigth
+        bboxes[:, 0] = (bboxes[:, 0] * ratio + padw)
+        bboxes[:, 1] = (bboxes[:, 1] * ratio + padh)
+        bboxes[:, 2] = (bboxes[:, 2] * ratio)
+        bboxes[:, 3] = (bboxes[:, 3] * ratio)
         
         return   bboxes
     
@@ -187,5 +203,4 @@ class CustomDataset(Dataset):
         bboxes[:, 1] /= img_height
         bboxes[:, 2] /= img_width
         bboxes[:, 3] /= img_height
-        
         return bboxes
