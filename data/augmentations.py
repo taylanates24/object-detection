@@ -1,38 +1,34 @@
-import cv2
 import imgaug.augmenters as iaa
 from imgaug.augmentables.bbs import BoundingBoxesOnImage
 import numpy as np
 
 class Augmentations:
     
-    def __init__(self, prob=0.5, scale=[0.95, 1.05], brightness=[-10, 10], saturation=[-10, 10], hue=[-10, 10], add_grayscale=[0, 0.2],
-                 motion_blur=[3,5], contrast=[0.8,1.2], translate=[[-0.1,0.1],[-0.1,0.1]], rotate=[-5,5], shear=[-5,5]) -> None:
+    def __init__(self, opt) -> None:
+
+        augmentations = []
         
-        fliplr = iaa.Fliplr(prob)
-        scale = iaa.Affine(scale=scale)
-        brightness = iaa.AddToBrightness(brightness)
-        saturation = iaa.AddToSaturation(saturation)
-        hue = iaa.AddToHue(hue)
-        grayscale = iaa.Grayscale(alpha=add_grayscale)
-        motion_blur = iaa.MotionBlur(k=motion_blur)
-        contrast_shift = iaa.GammaContrast(contrast)
-        translate = iaa.Affine(translate_percent={"x": translate[0], "y": translate[1]})
-        rotate = iaa.Affine(rotate=rotate)
-        shear = iaa.Affine(shear=shear)
-        
-        self.seq = iaa.Sequential([
-            fliplr,
-            scale,
-            brightness,
-            saturation,
-            hue,
-            grayscale,
-            motion_blur,
-            contrast_shift,
-            translate,
-            rotate,
-            shear
-            ])
+        if opt['fliplr']:   
+            augmentations.append(iaa.Fliplr(opt['fliplr']))
+        if opt['scale']:   
+            augmentations.append(iaa.Affine(scale=opt['scale']))
+        if opt['brightness']:   
+            augmentations.append(iaa.AddToBrightness(opt['brightness']))
+        if opt['saturation']:   
+            augmentations.append(iaa.AddToSaturation(opt['saturation']))
+        if opt['add_grayscale']:   
+            augmentations.append(iaa.Grayscale(alpha=opt['add_grayscale']))
+        if opt['motion_blur']:   
+            augmentations.append(iaa.MotionBlur(k=opt['motion_blur']))
+        if opt['translate']:   
+            augmentations.append(iaa.Affine(translate_percent={"x": opt['translate'][0], "y": opt['translate'][1]}))
+        if opt['rotate']:   
+            augmentations.append(iaa.Affine(rotate=opt['rotate']))
+        if opt['shear']:   
+            augmentations.append(iaa.Affine(shear=opt['shear']))
+
+        if len(augmentations):
+            self.seq = iaa.Sequential(augmentations)
         
     def __call__(self, img_data):
         
@@ -48,19 +44,6 @@ class Augmentations:
         img_data = {'img': img, 'bboxes': bboxes}
         
         return img_data
-        
-        
-class RandomAffine:
-    
-    def __init__(self) -> None:
-        
-        self.aug_scale = iaa.Affine(scale=(0.5, 1.5))
-    
-    
-    def __call__(self, img_data):
-        
-        pass
-
     
     
 class CopyPast:
