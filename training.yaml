@@ -1,6 +1,6 @@
-augmentations: # write the desired values or null if that augmentation won't be used.
+augmentations: # write the desired values, and append the probability, e.g. [val1, val2, probability] or null if that augmentation won't be used.
   fliplr: 0.5 # 0.5
-  scale: [0.95, 1.05] # [0.95, 1.05]
+  scale: [0.95, 1.05, 0.3] # [0.95, 1.05]
   brightness: [-10, 10] # [-10, 10]
   saturation: [-10, 10] # [-10, 10] 
   hue: [-10, 10] # [-10, 10]

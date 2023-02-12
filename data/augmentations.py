@@ -1,7 +1,7 @@
 import imgaug.augmenters as iaa
 from imgaug.augmentables.bbs import BoundingBoxesOnImage
 import numpy as np
-
+import random
 class Augmentations:
     
     def __init__(self, opt) -> None:
@@ -10,8 +10,8 @@ class Augmentations:
         
         if opt['fliplr']:   
             augmentations.append(iaa.Fliplr(opt['fliplr']))
-        if opt['scale']:   
-            augmentations.append(iaa.Affine(scale=opt['scale']))
+        if opt['scale'] and random.random() < opt['scale'][-1]:
+            augmentations.append(iaa.Affine(scale=opt['scale'][:2]))
         if opt['brightness']:   
             augmentations.append(iaa.AddToBrightness(opt['brightness']))
         if opt['saturation']:   
