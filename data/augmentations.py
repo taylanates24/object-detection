@@ -1,13 +1,17 @@
 import cv2
 import imgaug.augmenters as iaa
 from imgaug.augmentables.bbs import BoundingBoxesOnImage
+import numpy as np
 
-class HorizontalFlip:
+class Augmentations:
     
     def __init__(self, prob=0.5) -> None:
-        self.aug = iaa.Fliplr(prob)
-    
-    
+        self.fliplr = iaa.Fliplr(prob)
+
+        self.seq = iaa.Sequential([
+            self.fliplr,
+        ])
+        
     def __call__(self, img_data):
         
         img = img_data['img']
@@ -15,7 +19,7 @@ class HorizontalFlip:
         
         bboxes_iaa = BoundingBoxesOnImage([], img.shape).from_xyxy_array(bboxes, img.shape)
 
-        img, bbox_aug = self.aug(image=img, bounding_boxes=bboxes_iaa)
+        img, bbox_aug = self.seq(image=img.astype(np.uint8), bounding_boxes=bboxes_iaa)
 
         bboxes = bbox_aug.to_xyxy_array()
         img_data = {'img': img, 'bboxes': bboxes}
@@ -23,6 +27,29 @@ class HorizontalFlip:
         return img_data
         
     
+class RandomAffine:
+    
+    def __init__(self) -> None:
+        
+        self.aug_scale = iaa.Affine(scale=(0.5, 1.5))
+    
+    
+    def __call__(self, img_data):
+        
+        
+        
+        
+        #aug = iaa.Affine(scale=(0.5, 1.5))
+        #aug = iaa.Affine(translate_percent={"x": (-0.2, 0.2), "y": (-0.2, 0.2)})
+        #aug = iaa.Affine(rotate=(-45, 45))
+        #aug = iaa.Affine(shear=(-16, 16))
+        #aug = iaa.TranslateX(percent=(-0.1, 0.1))
+        #aug = iaa.TranslateY(percent=(-0.1, 0.1))
+        #aug = iaa.Rotate((-45, 45))
+        #aug = iaa.ShearX((-20, 20))
+        #aug = iaa.ShearY((-20, 20))
+        #
+        pass
 class BrightnessShift:
     
     def __init__(self) -> None:
@@ -106,24 +133,7 @@ class ContrastShift:
         bbs = BoundingBoxesOnImage(bbox_aug, shape=(img_heigth, img_width, 3))'''
         
         
-class RandomAffine:
-    
-    def __init__(self) -> None:
-        pass
-    
-    
-    def __call__(self, img, bboxes):
-        #aug = iaa.Affine(scale=(0.5, 1.5))
-        #aug = iaa.Affine(translate_percent={"x": (-0.2, 0.2), "y": (-0.2, 0.2)})
-        #aug = iaa.Affine(rotate=(-45, 45))
-        #aug = iaa.Affine(shear=(-16, 16))
-        #aug = iaa.TranslateX(percent=(-0.1, 0.1))
-        #aug = iaa.TranslateY(percent=(-0.1, 0.1))
-        #aug = iaa.Rotate((-45, 45))
-        #aug = iaa.ShearX((-20, 20))
-        #aug = iaa.ShearY((-20, 20))
-        #
-        pass
+
     
     
 class CopyPast:
