@@ -1,15 +1,27 @@
 import cv2
-import imgaug.augmenters as aug
+import imgaug.augmenters as iaa
+from imgaug.augmentables.bbs import BoundingBoxesOnImage
 
 class HorizontalFlip:
     
-    def __init__(self) -> None:
-        pass
+    def __init__(self, prob=0.5) -> None:
+        self.aug = iaa.Fliplr(prob)
     
     
-    def __call__(self, img, bboxes):
+    def __call__(self, img_data):
         
-        pass
+        img = img_data['img']
+        bboxes = img_data['bboxes']
+        
+        bboxes_iaa = BoundingBoxesOnImage([], img.shape).from_xyxy_array(bboxes, img.shape)
+
+        img, bbox_aug = self.aug(image=img, bounding_boxes=bboxes_iaa)
+
+        bboxes = bbox_aug.to_xyxy_array()
+        img_data = {'img': img, 'bboxes': bboxes}
+        
+        return img_data
+        
     
 class BrightnessShift:
     
