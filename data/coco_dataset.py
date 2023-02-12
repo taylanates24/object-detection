@@ -10,18 +10,18 @@ import numpy as np
 
 class CustomDataset(Dataset):
 
-    def __init__(self, image_path, annotation_path, image_size=640, normalize=False, augment=False) -> None:
+    def __init__(self, image_path, annotation_path, image_size=640, normalize=False, augment=False, augmentations=None) -> None:
         super(CustomDataset, self).__init__()
         
         self.image_root = os.path.join('/', *image_path.split('/')[:-1])
         self.image_path = image_path
         self.annotation_path = annotation_path
         self.normalize = normalize
-        self.augment = augment
         self.coco = COCO(self.annotation_path)
         self.image_paths = sorted(os.listdir(self.image_path))
         self.ids = sorted(list(self.coco.imgs.keys()))
         self.image_size = image_size
+        self.augmentations = augmentations
         
         if self.normalize:
             mean, stddev = self.get_statistics()
@@ -169,3 +169,23 @@ class CustomDataset(Dataset):
         
         return bboxes
  
+    def x1y1wh_to_xyxy(self, bboxes):
+        
+        bboxes[:, 2:] = bboxes[:,:2] + bboxes[:, 2:]
+        
+        return bboxes
+    
+    def xyxy_to_x1y1wh(self, bboxes):
+        
+        bboxes[:, 2:] = bboxes[:, 2:] - bboxes[:,:2]
+        
+        return bboxes
+    
+    def normalize_bboxes(self, bboxes, img_width, img_height):
+        
+        bboxes[:, 0] /= img_width
+        bboxes[:, 1] /= img_height
+        bboxes[:, 2] /= img_width
+        bboxes[:, 3] /= img_height
+        
+        return bboxes
