@@ -1,12 +1,12 @@
 augmentations: # write the desired values, and append the probability, e.g. [val1, val2, probability] or null if that augmentation won't be used.
-  fliplr: 0.5 # 0.5
+  fliplr: [0.5, 0.3] # 0.5
   scale: [0.95, 1.05, 0.3] # [0.95, 1.05]
-  brightness: [-10, 10] # [-10, 10]
-  saturation: [-10, 10] # [-10, 10] 
-  hue: [-10, 10] # [-10, 10]
-  add_grayscale: [0, 0.2] # [0, 0.2]
-  motion_blur: [3, 5] # [3, 5]
-  contrast: [0.8, 1.2] # [0.8, 1.2]
-  translate: [[-0.1, 0.1], [-0.1, 0.1]] # [[-0.1, 0.1], [-0.1, 0.1]]
-  rotate: [-5, 5] # [-5, 5]
-  shear: [-5, 5] # [-5, 5]
+  brightness: [-10, 10, 0.3] # [-10, 10]
+  saturation: [-10, 10, 0.3] # [-10, 10] 
+  hue: [-10, 10, 0.3] # [-10, 10]
+  add_grayscale: [0, 0.2, 0.3] # [0, 0.2]
+  motion_blur: [3, 5, 0.3] # [3, 5]
+  contrast: [0.8, 1.2, 0.3] # [0.8, 1.2]
+  translate: [[-0.1, 0.1], [-0.1, 0.1], 0.3] # [[-0.1, 0.1], [-0.1, 0.1]]
+  rotate: [-5, 5, 0.3] # [-5, 5]
+  shear: [-5, 5, 0.3] # [-5, 5]

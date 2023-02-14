@@ -8,24 +8,26 @@ class Augmentations:
 
         augmentations = []
         
-        if opt['fliplr']:   
-            augmentations.append(iaa.Fliplr(opt['fliplr']))
+        if opt['fliplr'] and random.random() < opt['fliplr'][-1]:   
+            augmentations.append(iaa.Fliplr(opt['fliplr'][0]))
         if opt['scale'] and random.random() < opt['scale'][-1]:
             augmentations.append(iaa.Affine(scale=opt['scale'][:2]))
-        if opt['brightness']:   
-            augmentations.append(iaa.AddToBrightness(opt['brightness']))
-        if opt['saturation']:   
-            augmentations.append(iaa.AddToSaturation(opt['saturation']))
-        if opt['add_grayscale']:   
-            augmentations.append(iaa.Grayscale(alpha=opt['add_grayscale']))
-        if opt['motion_blur']:   
-            augmentations.append(iaa.MotionBlur(k=opt['motion_blur']))
-        if opt['translate']:   
+        if opt['brightness'] and random.random() < opt['brightness'][-1]:   
+            augmentations.append(iaa.AddToBrightness(opt['brightness'][:2]))
+        if opt['saturation'] and random.random() < opt['saturation'][-1]:   
+            augmentations.append(iaa.AddToSaturation(opt['saturation'][:2]))
+        if opt['hue'] and random.random() < opt['hue'][-1]:   
+            augmentations.append(iaa.AddToHue(opt['hue'][:2]))
+        if opt['add_grayscale'] and random.random() < opt['add_grayscale'][-1]:   
+            augmentations.append(iaa.Grayscale(alpha=opt['add_grayscale'][:2]))
+        if opt['motion_blur'] and random.random() < opt['motion_blur'][-1]:   
+            augmentations.append(iaa.MotionBlur(k=opt['motion_blur'][:2]))
+        if opt['translate'] and random.random() < opt['translate'][-1]:   
             augmentations.append(iaa.Affine(translate_percent={"x": opt['translate'][0], "y": opt['translate'][1]}))
-        if opt['rotate']:   
-            augmentations.append(iaa.Affine(rotate=opt['rotate']))
-        if opt['shear']:   
-            augmentations.append(iaa.Affine(shear=opt['shear']))
+        if opt['rotate'] and random.random() < opt['rotate'][-1]:   
+            augmentations.append(iaa.Affine(rotate=opt['rotate'][:2]))
+        if opt['shear'] and random.random() < opt['shear'][-1]:   
+            augmentations.append(iaa.Affine(shear=opt['shear'][:2]))
 
         if len(augmentations):
             self.seq = iaa.Sequential(augmentations)
