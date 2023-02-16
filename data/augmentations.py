@@ -51,52 +51,63 @@ class Augmentations:
     
 class CopyPaste:
     
-    def __init__(self, bboxes_len=20, paste_len=3) -> None:
+    def __init__(self, bboxes_len=20, paste_len=3, augment_box=True, opt=None) -> None:
         
-
+        opt = opt['copy_paste']
         self.bboxes_len = bboxes_len
         self.paste_len = paste_len
         self.boxes_w_labels = np.array([])
-    
+
+        if augment_box:
+            bbox_augmentations = []
+            if opt['fliplr']:   
+                bbox_augmentations.append(iaa.Fliplr(opt['fliplr']))
+            if opt['brightness']:   
+                bbox_augmentations.append(iaa.AddToBrightness(opt['brightness']))
+            if opt['saturation']:   
+                bbox_augmentations.append(iaa.AddToSaturation(opt['saturation']))
+            if opt['hue']:   
+                bbox_augmentations.append(iaa.AddToHue(opt['hue']))
+            if opt['add_grayscale']:   
+                bbox_augmentations.append(iaa.Grayscale(opt['add_grayscale']))
+            if opt['motion_blur']:   
+                bbox_augmentations.append(iaa.MotionBlur(opt['motion_blur']))
+            if opt['contrast']:
+                bbox_augmentations.append(iaa.GammaContrast(opt['contrast'], per_channel=True))
+
+            self.bbox_augmentations = iaa.SomeOf(n=1, children=bbox_augmentations)
+
+        else:
+            self.bbox_augmentations = None
+
+
     def __call__(self, img_data):
-
-
-
 
         img = img_data['img']
         bboxes = img_data['labels'][:,1:]
         category_ids = img_data['labels'][:,0]
-
-
-
-        bboxes_iaa = BoundingBoxesOnImage([], img.shape).from_xyxy_array(bboxes, img.shape)
-        image_before = bboxes_iaa.draw_on_image(img, size=2)
-        cv2.imwrite('paste_before.jpg', image_before)
         
         cropped_boxes = self.get_bbox(img, bboxes, category_ids)
         
-        print('cropped_boxes')
         if not len(self.boxes_w_labels):
             self.boxes_w_labels = cropped_boxes
             self.check_bbox_memory()
             return img_data
             
-        
-        
-        
-
-        
         if len(self.boxes_w_labels) < self.paste_len:
             bbox_number = len(self.boxes_w_labels)
         else:
-            #bbox_number = random.randint(1, self.paste_len)
-            bbox_number=4
-            
+            bbox_number = random.randint(1, self.paste_len)
+
         pasted_boxes = self.boxes_w_labels[:,1][:bbox_number]
+
+        if self.bbox_augmentations:
+            pasted_boxes = self.bbox_augmentations(images=pasted_boxes)
+            pasted_boxes = np.array([np.squeeze(x) for x in pasted_boxes], dtype=object)
+
         pasted_cat_ids = self.boxes_w_labels[:,0][:bbox_number]
         self.boxes_w_labels = self.boxes_w_labels[bbox_number:]
-        print('pasted_boxes')
-        # check
+
         new_boxes = []
         new_category_ids = []
         area_1 = calc_bbox_area(bboxes=bboxes)
@@ -108,7 +119,7 @@ class CopyPaste:
                  [[img.shape[0] / 2, img.shape[0]], [0, img.shape[1] / 2]],
                  [[img.shape[0] / 2, img.shape[0]], [img.shape[1] / 2, img.shape[1]]]]
         grid_idx = 0
-        print('grid_idx')
+
         for _, bbox in sorted(zip(areas, pasted_boxes), key=lambda x: x[0], reverse=True):
             grid = grids[grid_idx]
             gridx = grid[1]
@@ -142,28 +153,22 @@ class CopyPaste:
             new_box = np.array([x1, y1, x2, y2])
             new_boxes.append(new_box)
             new_category_ids.append(pasted_cat_ids[grid_idx])
-            #print('asd')
             grid_idx += 1
-        print('pasted')
+
         if not len(new_boxes):
             return img_data
         new_boxes = np.array(new_boxes)
-        ious = inter_over_union(bboxes, new_boxes)
-        print('ious')
+        ioas = inter_over_area(bboxes, new_boxes)
+
         i = 0
-        ious = np.sum(ious, axis=1)
-        print('np.sum')
-        print(ious)
-        print('len ious: ', len(ious))
-        print('shape:', category_ids.shape)
-        for iou in ious:
-            print('for iou')
+        ioas = np.sum(ioas, axis=1)
+
+        for iou in ioas:
             if np.any(iou>.3):
                 bboxes = np.delete(bboxes, i, axis=0)
                 category_ids = np.delete(category_ids, i, axis=0)
             else:
                 i += 1
-        print('deleted')
         bboxes = np.concatenate((bboxes, new_boxes), 0)
         category_ids = np.concatenate((category_ids, new_category_ids), 0)
         bboxes_iaa = BoundingBoxesOnImage([], img.shape).from_xyxy_array(bboxes, img.shape)
@@ -173,11 +178,9 @@ class CopyPaste:
         self.boxes_w_labels = np.concatenate((self.boxes_w_labels, cropped_boxes), 0)
         self.check_bbox_memory()
         self.shuffle_bboxes()
-        
-        print('shuffle_bboxes')
+
         labels = np.concatenate((np.expand_dims(category_ids, 1), bboxes),1)
         img_data = {'img': img, 'labels': labels}
-        print('bboxes:', len(self.boxes_w_labels))
         return img_data
 
 
@@ -234,7 +237,7 @@ def calc_img_area(images):
     return max_area
     
     
-def inter_over_union(bboxes1, bboxes2):
+def inter_over_area(bboxes1, bboxes2):
 
     x11, y11, x12, y12 = np.split(bboxes1, 4, axis=1)
     x21, y21, x22, y22 = np.split(bboxes2, 4, axis=1)
@@ -244,23 +247,63 @@ def inter_over_union(bboxes1, bboxes2):
     yB = np.minimum(y12, np.transpose(y22))
     interArea = np.maximum((xB - xA + 1), 0) * np.maximum((yB - yA + 1), 0)
     boxAArea = (x12 - x11 + 1) * (y12 - y11 + 1)
-    boxBArea = (x22 - x21 + 1) * (y22 - y21 + 1)
-    iou = interArea / (boxAArea + np.transpose(boxBArea) - interArea)
+    ioa = interArea / boxAArea
 
-    return iou   
-
+    return ioa
 
 
 class CutOut:
 
-    def __init__(self):
+    def __init__(self, percentages=[0.2], fill_type=1):
 
-        pass
+        self.percentages = sorted(percentages, reverse=True)
+        types = ['gaussian_noise', 'random_color', 'white', 'black', 'gray']
+        self.fill_type = types[fill_type]
 
     def __call__(self, img_data):
 
         img = img_data['img']
         bboxes = img_data['labels'][:,1:]
         category_ids = img_data['labels'][:,0]
+        
+        height, width = img.shape[:2]
 
+        
+        cutout_boxes = []
+        for scale in self.percentages:
+            h, w = int(height * scale), int(width * scale)
+            y1 = int(random.randrange(height - h - 1))
+            x1 = int(random.randrange(width - w - 1))
+            y2 = y1 + h
+            x2 = x1 + w
+            if self.fill_type == 'random_color':
+                box = np.full((h, w, 3), (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)))
+            elif self.fill_type == 'white':
+                box = np.full((h, w, 3), 255)
+            elif self.fill_type == 'black':
+                box = np.full((h, w, 3), 0)
+            elif self.fill_type == 'gaussian_noise':
+                box = np.random.normal(0, 1.5, (h, w, 3)) * 255
+            elif self.fill_type == 'gray':
+                box = np.full((h, w, 3), 127)
+
+            img[y1:y2, x1:x2, :] = box
+            cutout_boxes.append(np.array([x1, y1, x2, y2]))
+
+        cutout_boxes = np.array(cutout_boxes)
+        ioas = inter_over_area(bboxes, cutout_boxes)
+        ioas = np.sum(ioas, axis=1)
+
+        i = 0
+        for ioa in ioas:
+            if np.any(ioa>.6):
+                bboxes = np.delete(bboxes, i, axis=0)
+                category_ids = np.delete(category_ids, i, axis=0)
+            else:
+                i += 1
+
+        bboxes_iaa = BoundingBoxesOnImage([], img.shape).from_xyxy_array(bboxes, img.shape)
+        image_before = bboxes_iaa.draw_on_image(img, size=2)
+        #cv2.imwrite('paste.jpg', image_before)
+        cv2.imwrite('beforecutout.jpg', image_before)
         pass
