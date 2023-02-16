@@ -248,3 +248,19 @@ def inter_over_union(bboxes1, bboxes2):
     iou = interArea / (boxAArea + np.transpose(boxBArea) - interArea)
 
     return iou   
+
+
+
+class CutOut:
+
+    def __init__(self):
+
+        pass
+
+    def __call__(self, img_data):
+
+        img = img_data['img']
+        bboxes = img_data['labels'][:,1:]
+        category_ids = img_data['labels'][:,0]
+
+        pass
