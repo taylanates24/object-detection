@@ -1,10 +1,10 @@
 import torch
 import torch.nn as nn
 import timm
-
-
+#timm.list_models(pretrained=True)
+#'hrnet_w64'
 class TyNet(nn.Module):
-    def __init__(self, backbone='mixnet_xl.ra_in1k', nc=80) -> None:
+    def __init__(self, backbone='mixnet_xl.ra_in1k', nc=80, hyp=None, anchors=None) -> None:
         super(TyNet, self).__init__()
         self.backbone = timm.create_model(backbone, pretrained=True, features_only=True)
         x=torch.randn(1,3,224,224)
@@ -13,7 +13,14 @@ class TyNet(nn.Module):
         
         #avail_pretrained_models = timm.list_models(pretrained=True)
         self.neck = TyNeck(layers=layers)
-        self.head = TyHead(nc=nc+5, num_outs=len(layers))
+        self.head = TyHead(nc=nc+5, num_outs=len(layers), anchors=anchors)
+        self.hyp=hyp
+        
+        s=320
+        strides = torch.tensor([s / x.shape[-2] for x in self.forward(torch.zeros(1, 3, s, s))])  # forward
+        anchors /= strides.cuda().view(-1, 1, 1)
+        self.head.stride = strides
+        self.head.anchors = anchors
         
     def forward(self, x):
         x = self.backbone(x)[-3:]
@@ -21,9 +28,12 @@ class TyNet(nn.Module):
         x = self.head(x)
         return x
 
+    def get_parameters(self):
+
+        return self.head.anchors, self.head.stride
 
 class TyNeck(nn.Module):
-    def __init__(self, layers=[256, 512, 1024], out_size=256, procedure=[2, 3]) -> None:
+    def __init__(self, layers=[512, 1024, 2048], out_size=256, procedure=[2, 3]) -> None:
         super(TyNeck, self).__init__()
 
         self.out_layer = Conv(in_ch=layers[-1], out_ch=out_size, k_size=3, s=1, p=1)
@@ -63,21 +73,24 @@ class TyNeck(nn.Module):
 
         return outs
 
-
 class TyHead(nn.Module):
-    def __init__(self, in_ch=256, out_ch=255, nc=85) -> None:
+    def __init__(self, num_outs=3, in_ch=256, out_ch=255, nc=85, anchors=[[ 10.,  14.], [ 23.,  27.], [ 37.,  58.],[ 81.,  82.], [135., 169.], [344., 319.]]) -> None:
         super(TyHead, self).__init__()
         self.conv = nn.Conv2d(in_channels=in_ch, out_channels=out_ch, kernel_size=1, stride=1, padding=0)
-
-
+        self.num_outs = num_outs
+        self.na = len(anchors)
         self.nc = nc
+        self.grid = [torch.zeros(1)] * self.na
+        self.anchor_grid = [torch.zeros(1)] * self.na  # init anchor grid
+        self.anchors = torch.tensor(anchors).cuda()
+        self.stride = None
         
     def forward(self, inputs):
+        
         for i in range(len(inputs)):
             inputs[i] = self.conv(inputs[i])
-            bs, _, ny, nx = inputs[i].shape
-            inputs[i] = inputs[i].view(bs, self.na, self.nc, ny, nx).permute(0, 1, 3, 4, 2).contiguous()
 
+        return inputs
 
 
 class ScalableCSPResBlock(nn.Module):
