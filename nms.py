@@ -21,9 +21,11 @@ def non_max_suppression(prediction, conf_thres=0.9, iou_thres=0.6, classes=None,
     output = [torch.zeros((0, 6), device=prediction.device)] * prediction.shape[0]
     
     for pred_idx, pred in enumerate(prediction):  #for each batch
+        
         pred = pred[pred_candidates[pred_idx]]  # confidence mask
         
         if not pred.shape[0]:
+            
             continue
         
         pred[:, 5:] *= pred[:, 4:5]  # confidence_score = cls_confidences * objectness_score
@@ -32,20 +34,28 @@ def non_max_suppression(prediction, conf_thres=0.9, iou_thres=0.6, classes=None,
 
         
         if multi_label:
+            
             i, j = (pred[:, 5:] > conf_thres).nonzero(as_tuple=False).T # index values of class confidences that higher than conf_thres
             pred = torch.cat((box[i], pred[i, j + 5, None], j[:, None].float()), 1)
+            
         else:  # best class only
+            
             conf, j = pred[:, 5:].max(1, keepdim=True)
             pred = torch.cat((box, conf, j.float()), 1)[conf.view(-1) > conf_thres]
         
         
         if classes is not None:
+            
             pred = pred[(pred[:, 5:6] == torch.tensor(classes, device=pred.device)).any(1)]
         
         num_boxes = pred.shape[0]
+        
         if not num_boxes:
+            
             continue
+        
         elif num_boxes > max_nms:  # epred_candidatesess boxes
+            
             pred = pred[pred[:, 4].argsort(descending=True)[:max_nms]]  # sort by confidenum_classese
 
         # Batched NMS
@@ -55,6 +65,7 @@ def non_max_suppression(prediction, conf_thres=0.9, iou_thres=0.6, classes=None,
         i = torchvision.ops.nms(boxes, scores, iou_thres)  # int64 tensor with the indices of the elements that have been kept by NMS, sorted in decreasing order of scores
         
         if i.shape[0] > max_det:  # limit detections
+            
             i = i[:max_det]
             
         output[pred_idx] = pred[i]
