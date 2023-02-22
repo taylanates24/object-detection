@@ -7,11 +7,14 @@ from pycocotools.coco import COCO
 import os
 import cv2
 import numpy as np
-from augmentations import Augmentations
+from augmentations import Augmentations, CopyPaste, CutOut
+from process_box import x1y1_to_xcyc, x1y1wh_to_xyxy, xyxy_to_x1y1wh, normalize_bboxes, resize_bboxes, adjust_bboxes
+
+
 
 class CustomDataset(Dataset):
 
-    def __init__(self, image_path, annotation_path, image_size=640, normalize=False, augment=False, augmentations=None) -> None:
+    def __init__(self, image_path, annotation_path, image_size=640, normalize=True, augment=False, augmentations=None) -> None:
         super(CustomDataset, self).__init__()
         
         self.image_root = os.path.join('/', *image_path.split('/')[:-1])
@@ -25,13 +28,18 @@ class CustomDataset(Dataset):
         self.augmentations = augmentations
         
         if self.normalize:
+            
             mean, stddev = self.get_statistics()
-            self.transform = transforms.Compose([
-                transforms.ToTensor(),
-                transforms.Normalize(mean=mean, std=stddev)
-            ])
-        
+            
+            self.transform = transforms.Compose(
+                [
+                    transforms.ToTensor(),   
+                    transforms.Normalize(mean=mean, std=stddev)
+                ]
+            )
+       
         else:
+            
             self.transform = transforms.Compose([
                 transforms.ToTensor()
             ])
@@ -39,61 +47,58 @@ class CustomDataset(Dataset):
     
     def __len__(self):
         
-        return len(self.image_paths)
+        return len(self.ids)
     
     
     def __getitem__(self, index):
         
-        img, ratio = self.load_image(index)
-        image_id = self.ids[index]
         
-        bboxes, category_ids = self.load_labels(image_id=image_id, ratio=ratio)
+        image_id = self.ids[index]
 
+        img, ratio = self.load_image(image_id)
+        labels = self.load_labels(image_id=image_id, ratio=ratio)
+        
         if self.augmentations:
             
-            bboxes = self.x1y1wh_to_xyxy(bboxes=bboxes)
-            img_data = {'img': img, 'bboxes':bboxes}
+            img_data = {'img': img, 'labels':labels}
             
             for augment in self.augmentations:
+                
                 img_data = augment(img_data)
             
-            img, bboxes = img_data['img'], img_data['bboxes']
+            img, labels = img_data['img'], img_data['labels']
 
-            bboxes = self.xyxy_to_x1y1wh(bboxes=bboxes)
-        
         if img.shape[0] != img.shape[1]:
             
             img, padding_w, padding_h = self.letter_box(img=img, size=self.image_size)
-            bboxes = self.adjust_bboxes(bboxes=bboxes,
+            labels[:, :4] = adjust_bboxes(bboxes=labels[:, :4],
                                         padw=padding_w,
                                         padh=padding_h)
 
-        bboxes = self.x1y1_to_xcyc(bboxes=bboxes)
-        bboxes = self.normalize_bboxes(bboxes=bboxes, img_width=img.shape[1], img_height=img.shape[0])
+        img = img.astype(np.float32) / 255.
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         
-        labels = np.concatenate((np.expand_dims(category_ids, 1), bboxes),1)
-        
-        if not self.normalize:
-            img = img / 255
+        if self.transform:
+            
+            img = self.transform(img)
 
-        img = self.transform(img) 
+        sample = {'img': img, 'labels': labels, 'scale': ratio}
  
-        return img, labels
+        return sample
     
     
-    def load_image(self, index):
+    def load_image(self, img_id):
         
-        img_path = self.image_paths[index]
+        img_path = self.coco.loadImgs(img_id)[0]['file_name']
         img = cv2.imread(os.path.join(self.image_path, img_path))
+
+
         height, width = img.shape[:2]
         ratio = self.image_size / max(height, width)            
         
         if ratio != 1:
             
             img = cv2.resize(img, (int(width*ratio), int(height*ratio)), interpolation=cv2.INTER_CUBIC)
-        
-
-
 
         return img, ratio
         
@@ -109,32 +114,23 @@ class CustomDataset(Dataset):
         for ann in annotations:
             
             bboxes.append(ann['bbox'])
-            category_ids.append(ann['category_id'])
+            category_ids.append(ann['category_id'] - 1)
 
         bboxes = np.array(bboxes)
         
         if ratio != 1:
-            self.resize_bboxes(bboxes=bboxes, ratio=ratio)
-
-        
+            
+            resize_bboxes(bboxes=bboxes, ratio=ratio)
         
         category_ids = np.array(category_ids)
 
-            
-        return bboxes, category_ids
+        labels = np.concatenate((bboxes, np.expand_dims(category_ids, 1)),1)
+        labels[:, :4] = x1y1wh_to_xyxy(labels[:,:4])
+        
+        return labels
         
         
-    def resize_bboxes(self, bboxes, ratio):
-        bboxes *= ratio
-        
-        return   bboxes
-    
-    def adjust_bboxes(self, bboxes, padw, padh):
-        
-        bboxes[:, 0] = bboxes[:, 0] + padw
-        bboxes[:, 1] = bboxes[:, 1] + padh
-        
-        return   bboxes
+
     
     
     def letter_box(self, img, size):
@@ -170,6 +166,7 @@ class CustomDataset(Dataset):
         nb_samples = 0.
         
         for data, _ in tqdm(train_data_loader):
+            
             batch_samples = data.size(0)
             data = data.view(batch_samples, data.size(1), -1)
             mean += data.mean(2).sum(0)
@@ -181,28 +178,32 @@ class CustomDataset(Dataset):
 
         return mean, std
 
-    def x1y1_to_xcyc(self, bboxes):
-        
-        bboxes[:,:2] = bboxes[:,:2] + (bboxes[:, 2:] / 2)
-        
-        return bboxes
- 
-    def x1y1wh_to_xyxy(self, bboxes):
-        
-        bboxes[:, 2:] = bboxes[:,:2] + bboxes[:, 2:]
-        
-        return bboxes
+def collater(data):
     
-    def xyxy_to_x1y1wh(self, bboxes):
-        
-        bboxes[:, 2:] = bboxes[:, 2:] - bboxes[:,:2]
-        
-        return bboxes
+    imgs = [s['img'] for s in data]
+    annots = [torch.tensor(s['labels']) for s in data]
+    scales = [s['scale'] for s in data]
+
     
-    def normalize_bboxes(self, bboxes, img_width, img_height):
+    imgs = torch.from_numpy(np.stack(imgs, axis=0))
+
+    max_num_annots = max(annot.shape[0] for annot in annots)
+
+    if max_num_annots > 0:
+
+        annot_padded = torch.ones((len(annots), max_num_annots, 5)) * -1
+
+        for idx, annot in enumerate(annots):
+            
+            if annot.shape[0] > 0:
+                annot_padded[idx, :annot.shape[0], :] = annot
+    else:
         
-        bboxes[:, 0] /= img_width
-        bboxes[:, 1] /= img_height
-        bboxes[:, 2] /= img_width
-        bboxes[:, 3] /= img_height
-        return bboxes
+        annot_padded = torch.ones((len(annots), 1, 5)) * -1
+
+    
+
+    return {'img': imgs, 'labels': annot_padded, 'scale': scales}
+
+
+
