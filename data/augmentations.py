@@ -3,105 +3,164 @@ from imgaug.augmentables.bbs import BoundingBoxesOnImage
 import numpy as np
 import random
 import cv2
+
+#TODO handle no bbox case
+
 class Augmentations:
     
     def __init__(self, opt) -> None:
-
+        
+        opt = opt['augmentations']
+        
+        self.debug = False
+        num_aug = opt['num_aug']
+        
         augmentations = []
         
-        if opt['fliplr'] and random.random() < opt['fliplr'][-1]:   
-            augmentations.append(iaa.Fliplr(opt['fliplr'][0]))
-        if opt['scale'] and random.random() < opt['scale'][-1]:
-            augmentations.append(iaa.Affine(scale=opt['scale'][:2]))
-        if opt['brightness'] and random.random() < opt['brightness'][-1]:   
-            augmentations.append(iaa.AddToBrightness(opt['brightness'][:2]))
-        if opt['saturation'] and random.random() < opt['saturation'][-1]:   
-            augmentations.append(iaa.AddToSaturation(opt['saturation'][:2]))
-        if opt['hue'] and random.random() < opt['hue'][-1]:   
-            augmentations.append(iaa.AddToHue(opt['hue'][:2]))
-        if opt['add_grayscale'] and random.random() < opt['add_grayscale'][-1]:   
-            augmentations.append(iaa.Grayscale(alpha=opt['add_grayscale'][:2]))
-        if opt['motion_blur'] and random.random() < opt['motion_blur'][-1]:   
-            augmentations.append(iaa.MotionBlur(k=opt['motion_blur'][:2]))
-        if opt['translate'] and random.random() < opt['translate'][-1]:   
+        if opt['fliplr']:   
+            
+            augmentations.append(iaa.Fliplr(opt['fliplr']))
+            
+        if opt['scale']:
+            
+            augmentations.append(iaa.Affine(scale=opt['scale']))
+            
+        if opt['brightness']:   
+            
+            augmentations.append(iaa.AddToBrightness(opt['brightness']))
+            
+        if opt['saturation']:  
+             
+            augmentations.append(iaa.AddToSaturation(opt['saturation']))
+            
+        if opt['hue']:   
+            
+            augmentations.append(iaa.AddToHue(opt['hue']))
+            
+        if opt['add_grayscale']:  
+             
+            augmentations.append(iaa.Grayscale(alpha=opt['add_grayscale']))
+            
+        if opt['motion_blur']:   
+            
+            augmentations.append(iaa.MotionBlur(k=opt['motion_blur']))
+            
+        if opt['translate']:  
+             
             augmentations.append(iaa.Affine(translate_percent={"x": opt['translate'][0], "y": opt['translate'][1]}))
-        if opt['rotate'] and random.random() < opt['rotate'][-1]:   
-            augmentations.append(iaa.Affine(rotate=opt['rotate'][:2]))
-        if opt['shear'] and random.random() < opt['shear'][-1]:   
-            augmentations.append(iaa.Affine(shear=opt['shear'][:2]))
+            
+        if opt['rotate']:   
+            
+            augmentations.append(iaa.Affine(rotate=opt['rotate']))
+            
+        if opt['shear']: 
+              
+            augmentations.append(iaa.Affine(shear=opt['shear']))
 
         if len(augmentations):
-            self.seq = iaa.Sequential(augmentations)
+            
+            self.seq = iaa.SomeOf(n=num_aug, children=augmentations)
         
     def __call__(self, img_data):
         
         img = img_data['img']
-        bboxes = img_data['bboxes']
-        
-        bboxes_iaa = BoundingBoxesOnImage([], img.shape).from_xyxy_array(bboxes, img.shape)
+        bboxes = np.array(img_data['labels'][:,:4])
+        category_ids = img_data['labels'][:,4]
+
 
         img, bbox_aug = self.seq(image=img.astype(np.uint8), bounding_boxes=bboxes_iaa)
 
         bboxes = bbox_aug.to_xyxy_array()
         bboxes[bboxes<0] = 0
-        img_data = {'img': img, 'bboxes': bboxes}
+
+        if self.debug:
+            
+            bboxes_iaa = BoundingBoxesOnImage([], img.shape).from_xyxy_array(bboxes, img.shape)
+            image_after = bboxes_iaa.draw_on_image(img, size=2)
+            cv2.imwrite('image_after.jpg', image_after)
+
+        labels = np.concatenate((bboxes, np.expand_dims(category_ids, 1)),1)
+
+        img_data = {'img': img, 'labels': labels}
         
         return img_data
     
     
 class CopyPaste:
     
-    def __init__(self, bboxes_len=20, paste_len=3, augment_box=True, opt=None) -> None:
+    def __init__(self, opt=None) -> None:
         
         opt = opt['copy_paste']
-        self.bboxes_len = bboxes_len
-        self.paste_len = paste_len
+        self.bboxes_len = opt['bboxes_memory']
+        self.paste_len = opt['pasted_bbox_number']
         self.boxes_w_labels = np.array([])
 
-        if augment_box:
+        if opt['augment_box']:
+            
             bbox_augmentations = []
-            if opt['fliplr']:   
-                bbox_augmentations.append(iaa.Fliplr(opt['fliplr']))
-            if opt['brightness']:   
-                bbox_augmentations.append(iaa.AddToBrightness(opt['brightness']))
-            if opt['saturation']:   
-                bbox_augmentations.append(iaa.AddToSaturation(opt['saturation']))
-            if opt['hue']:   
-                bbox_augmentations.append(iaa.AddToHue(opt['hue']))
-            if opt['add_grayscale']:   
-                bbox_augmentations.append(iaa.Grayscale(opt['add_grayscale']))
-            if opt['motion_blur']:   
-                bbox_augmentations.append(iaa.MotionBlur(opt['motion_blur']))
-            if opt['contrast']:
-                bbox_augmentations.append(iaa.GammaContrast(opt['contrast'], per_channel=True))
+            
+            if opt['box_augments']['fliplr']:  
+                 
+                bbox_augmentations.append(iaa.Fliplr(opt['box_augments']['fliplr']))
+                
+            if opt['box_augments']['brightness']:   
+                
+                bbox_augmentations.append(iaa.AddToBrightness(opt['box_augments']['brightness']))
+                
+            if opt['box_augments']['saturation']:   
+                
+                bbox_augmentations.append(iaa.AddToSaturation(opt['box_augments']['saturation']))
+                
+            if opt['box_augments']['hue']:  
+                 
+                bbox_augmentations.append(iaa.AddToHue(opt['box_augments']['hue']))
+                
+            if opt['box_augments']['add_grayscale']: 
+                 
+                bbox_augmentations.append(iaa.Grayscale(opt['box_augments']['add_grayscale']))
+                
+            if opt['box_augments']['motion_blur']:   
+                
+                bbox_augmentations.append(iaa.MotionBlur(opt['box_augments']['motion_blur']))
+                
+            if opt['box_augments']['contrast']:
+                
+                bbox_augmentations.append(iaa.GammaContrast(opt['box_augments']['contrast'], per_channel=True))
 
             self.bbox_augmentations = iaa.SomeOf(n=1, children=bbox_augmentations)
 
         else:
+            
             self.bbox_augmentations = None
 
 
     def __call__(self, img_data):
 
         img = img_data['img']
-        bboxes = img_data['labels'][:,1:]
-        category_ids = img_data['labels'][:,0]
+        bboxes = img_data['labels'][:,:4]
+        category_ids = img_data['labels'][:,4]
         
         cropped_boxes = self.get_bbox(img, bboxes, category_ids)
         
         if not len(self.boxes_w_labels):
+            
             self.boxes_w_labels = cropped_boxes
             self.check_bbox_memory()
+            
             return img_data
             
         if len(self.boxes_w_labels) < self.paste_len:
+            
             bbox_number = len(self.boxes_w_labels)
+            
         else:
+            
             bbox_number = random.randint(1, self.paste_len)
 
         pasted_boxes = self.boxes_w_labels[:,1][:bbox_number]
 
         if self.bbox_augmentations:
+            
             pasted_boxes = self.bbox_augmentations(images=pasted_boxes)
             pasted_boxes = np.array([np.squeeze(x) for x in pasted_boxes], dtype=object)
 
@@ -121,29 +180,46 @@ class CopyPaste:
         grid_idx = 0
 
         for _, bbox in sorted(zip(areas, pasted_boxes), key=lambda x: x[0], reverse=True):
+            
             grid = grids[grid_idx]
             gridx = grid[1]
             gridy = grid[0]
+            
             if ratio < 0.1:
+                
                 continue
+            
             try:
+                
                 bbox=cv2.resize(bbox, (0,0), fx=ratio, fy=ratio)
+                
             except:
+                
                 pass
             
             if int(gridy[1] - bbox.shape[0] - 1) > int(gridy[0]):
+                
                 y1 = random.randrange(int(gridy[0]), int(gridy[1] - bbox.shape[0] - 1))
+                
             elif img.shape[0] - bbox.shape[0] - 1 > 0:
+                
                 y1 = random.randrange(img.shape[0] - bbox.shape[0] - 1)
+                
             else:
+                
                 continue
 
             
             if int(gridx[1] - bbox.shape[1] - 1) > int(gridx[0]):
+                
                 x1 = random.randrange(int(gridx[0]), int(gridx[1] - bbox.shape[1] - 1))
+                
             elif (img.shape[1] - bbox.shape[1] - 1) > 0:
+                
                 x1 = random.randrange(img.shape[1] - bbox.shape[1] - 1)
+                
             else:
+                
                 continue
             
 
@@ -156,7 +232,9 @@ class CopyPaste:
             grid_idx += 1
 
         if not len(new_boxes):
+            
             return img_data
+        
         new_boxes = np.array(new_boxes)
         ioas = inter_over_area(bboxes, new_boxes)
 
@@ -164,23 +242,26 @@ class CopyPaste:
         ioas = np.sum(ioas, axis=1)
 
         for iou in ioas:
+            
             if np.any(iou>.3):
+                
                 bboxes = np.delete(bboxes, i, axis=0)
                 category_ids = np.delete(category_ids, i, axis=0)
+                
             else:
+                
                 i += 1
+                
         bboxes = np.concatenate((bboxes, new_boxes), 0)
         category_ids = np.concatenate((category_ids, new_category_ids), 0)
-        bboxes_iaa = BoundingBoxesOnImage([], img.shape).from_xyxy_array(bboxes, img.shape)
-        image_before = bboxes_iaa.draw_on_image(img, size=2)
-        cv2.imwrite('paste.jpg', image_before)
         
         self.boxes_w_labels = np.concatenate((self.boxes_w_labels, cropped_boxes), 0)
         self.check_bbox_memory()
         self.shuffle_bboxes()
 
-        labels = np.concatenate((np.expand_dims(category_ids, 1), bboxes),1)
+        labels = np.concatenate((bboxes, np.expand_dims(category_ids, 1)),1)
         img_data = {'img': img, 'labels': labels}
+        
         return img_data
 
 
@@ -210,13 +291,12 @@ class CopyPaste:
         return np.array(cropped_bbox, dtype=object)
 
     def crop_bbox(self, img, bbox, i):
+        
         x1 = int(bbox[0])
         y1 = int(bbox[1])
         x2 = int(bbox[2])
         y2 = int(bbox[3])
         cropped_bbox = img[y1:y2, x1:x2, ...].copy()
-        cv2.imwrite('bboxes/' + str(i) + '_bbox.jpg', cropped_bbox)
-        #print('asd')
 
         return cropped_bbox
 
@@ -229,9 +309,13 @@ def calc_bbox_area(bboxes):
 def calc_img_area(images):
     
     max_area = 0
+    
     for img in images:
+        
         area = img.shape[0] * img.shape[1]
+        
         if area > max_area:
+            
             max_area = area
         
     return max_area
@@ -254,8 +338,12 @@ def inter_over_area(bboxes1, bboxes2):
 
 class CutOut:
 
-    def __init__(self, percentages=[0.2], fill_type=1):
-
+    def __init__(self, opt):
+        
+        opt = opt['cutout']
+        percentages = opt['percentages']
+        fill_type = opt['fill_type']
+        self.ioa_thr = opt['threshold']
         self.percentages = sorted(percentages, reverse=True)
         types = ['gaussian_noise', 'random_color', 'white', 'black', 'gray']
         self.fill_type = types[fill_type]
@@ -263,28 +351,40 @@ class CutOut:
     def __call__(self, img_data):
 
         img = img_data['img']
-        bboxes = img_data['labels'][:,1:]
-        category_ids = img_data['labels'][:,0]
+        bboxes = img_data['labels'][:,:4]
+        category_ids = img_data['labels'][:,4]
         
         height, width = img.shape[:2]
 
         
         cutout_boxes = []
+        
         for scale in self.percentages:
+            
             h, w = int(height * scale), int(width * scale)
             y1 = int(random.randrange(height - h - 1))
             x1 = int(random.randrange(width - w - 1))
             y2 = y1 + h
             x2 = x1 + w
+            
             if self.fill_type == 'random_color':
+                
                 box = np.full((h, w, 3), (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)))
+                
             elif self.fill_type == 'white':
+                
                 box = np.full((h, w, 3), 255)
+                
             elif self.fill_type == 'black':
+                
                 box = np.full((h, w, 3), 0)
+                
             elif self.fill_type == 'gaussian_noise':
+                
                 box = np.random.normal(0, 1.5, (h, w, 3)) * 255
+                
             elif self.fill_type == 'gray':
+                
                 box = np.full((h, w, 3), 127)
 
             img[y1:y2, x1:x2, :] = box
@@ -295,15 +395,19 @@ class CutOut:
         ioas = np.sum(ioas, axis=1)
 
         i = 0
+        
         for ioa in ioas:
-            if np.any(ioa>.6):
+            
+            if np.any(ioa>self.ioa_thr):
+                
                 bboxes = np.delete(bboxes, i, axis=0)
                 category_ids = np.delete(category_ids, i, axis=0)
+                
             else:
+                
                 i += 1
 
-        bboxes_iaa = BoundingBoxesOnImage([], img.shape).from_xyxy_array(bboxes, img.shape)
-        image_before = bboxes_iaa.draw_on_image(img, size=2)
-        #cv2.imwrite('paste.jpg', image_before)
-        cv2.imwrite('beforecutout.jpg', image_before)
-        pass
+        labels = np.concatenate((bboxes, np.expand_dims(category_ids, 1)),1)
+        img_data = {'img': img, 'labels': labels}
+        
+        return img_data
