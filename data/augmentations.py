@@ -67,7 +67,7 @@ class Augmentations:
         bboxes = np.array(img_data['labels'][:,:4])
         category_ids = img_data['labels'][:,4]
 
-
+        bboxes_iaa = BoundingBoxesOnImage([], img.shape).from_xyxy_array(bboxes, img.shape)
         img, bbox_aug = self.seq(image=img.astype(np.uint8), bounding_boxes=bboxes_iaa)
 
         bboxes = bbox_aug.to_xyxy_array()
@@ -91,6 +91,8 @@ class CopyPaste:
     def __init__(self, opt=None) -> None:
         
         opt = opt['copy_paste']
+        self.ioa_thr = opt['threshold']
+        
         self.bboxes_len = opt['bboxes_memory']
         self.paste_len = opt['pasted_bbox_number']
         self.boxes_w_labels = np.array([])
@@ -243,7 +245,7 @@ class CopyPaste:
 
         for iou in ioas:
             
-            if np.any(iou>.3):
+            if np.any(iou>self.ioa_thr):
                 
                 bboxes = np.delete(bboxes, i, axis=0)
                 category_ids = np.delete(category_ids, i, axis=0)
@@ -311,7 +313,7 @@ def calc_img_area(images):
     max_area = 0
     
     for img in images:
-        
+
         area = img.shape[0] * img.shape[1]
         
         if area > max_area:
@@ -339,7 +341,7 @@ def inter_over_area(bboxes1, bboxes2):
 class CutOut:
 
     def __init__(self, opt):
-        
+        self.debug = True
         opt = opt['cutout']
         percentages = opt['percentages']
         fill_type = opt['fill_type']
@@ -406,7 +408,12 @@ class CutOut:
             else:
                 
                 i += 1
-
+        if self.debug:
+            
+            bboxes_iaa = BoundingBoxesOnImage([], img.shape).from_xyxy_array(bboxes, img.shape)
+            image_after = bboxes_iaa.draw_on_image(img, size=2)
+            cv2.imwrite('image_after.jpg', image_after)
+            
         labels = np.concatenate((bboxes, np.expand_dims(category_ids, 1)),1)
         img_data = {'img': img, 'labels': labels}
         
