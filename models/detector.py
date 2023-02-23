@@ -20,3 +20,28 @@ class Detector(pl.LightningModule):
     def forward(self, x):
         
         return self.model(x)
+
+    def training_step(self, train_batch, batch_idx):
+
+        pass
+
+    def training_epoch_end(self, outputs):
+
+        pass
+
+    def validation_step(self, val_batch, batch_idx):
+
+        pass
+
+    def validation_epoch_end(self, outputs):
+
+        pass
+
+    def test_step(self, batch, batch_idx):
+
+        pass
+
+
+    def configure_optimizers(self):
+
+        pass
