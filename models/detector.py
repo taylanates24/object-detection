@@ -17,13 +17,21 @@ class Detector(pl.LightningModule):
         else:
             self.loss = loss
             
-    def forward(self, x):
+    def forward(self, images, labels):
         
         return self.model(x)
 
     def training_step(self, train_batch, batch_idx):
 
-        pass
+        images = data['img']
+        labels = data['labels']
+
+        output = self.forward(images, labels)
+        cls_loss, reg_loss = self.loss(classification, regression, anchors, annotations)
+
+        self.log('learning rate', self.scheduler.get_lr()[0])
+
+        return {'cls_loss': cls_loss, 'reg_loss': reg_loss}
 
     def training_epoch_end(self, outputs):
 
