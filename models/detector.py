@@ -46,7 +46,13 @@ class Detector(pl.LightningModule):
 
     def validation_step(self, val_batch, batch_idx):
 
-        pass
+        images = data['img']
+        labels = data['labels']
+
+        output = self.forward(images, labels)
+        cls_loss, reg_loss = self.loss(classification, regression, anchors, annotations)
+
+        return {'cls_loss': cls_loss, 'reg_loss': reg_loss}
 
     def validation_epoch_end(self, outputs):
 
