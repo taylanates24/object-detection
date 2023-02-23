@@ -83,7 +83,7 @@ class Detector(pl.LightningModule):
         self.log('validation cls_loss', avg_val_cls_loss)
         self.log('validation reg_loss', avg_val_reg_loss)
         self.log('validation total_loss', avg_val_loss)
-        
+
 
     def test_step(self, batch, batch_idx):
 
@@ -91,5 +91,10 @@ class Detector(pl.LightningModule):
 
 
     def configure_optimizers(self):
-
-        pass
+        optimizer = self.optimizer
+        scheduler = self.scheduler
+        
+        if scheduler:
+            return [optimizer], [scheduler]
+        
+        return [optimizer]
