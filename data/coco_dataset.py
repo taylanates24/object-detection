@@ -7,8 +7,8 @@ from pycocotools.coco import COCO
 import os
 import cv2
 import numpy as np
-from augmentations import Augmentations, CopyPaste, CutOut
-from process_box import x1y1_to_xcyc, x1y1wh_to_xyxy, xyxy_to_x1y1wh, normalize_bboxes, resize_bboxes, adjust_bboxes
+from data.augmentations import Augmentations, CopyPaste, CutOut
+from data.process_box import x1y1_to_xcyc, x1y1wh_to_xyxy, xyxy_to_x1y1wh, normalize_bboxes, resize_bboxes, adjust_bboxes
 
 
 
@@ -178,13 +178,12 @@ class CustomDataset(Dataset):
 
         return mean, std
 
+
 def collater(data):
-    
     imgs = [s['img'] for s in data]
     annots = [torch.tensor(s['labels']) for s in data]
     scales = [s['scale'] for s in data]
 
-    
     imgs = torch.from_numpy(np.stack(imgs, axis=0))
 
     max_num_annots = max(annot.shape[0] for annot in annots)
@@ -194,16 +193,9 @@ def collater(data):
         annot_padded = torch.ones((len(annots), max_num_annots, 5)) * -1
 
         for idx, annot in enumerate(annots):
-            
             if annot.shape[0] > 0:
                 annot_padded[idx, :annot.shape[0], :] = annot
     else:
-        
         annot_padded = torch.ones((len(annots), 1, 5)) * -1
 
-    
-
     return {'img': imgs, 'labels': annot_padded, 'scale': scales}
-
-
-

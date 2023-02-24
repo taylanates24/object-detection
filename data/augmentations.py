@@ -220,11 +220,13 @@ class CopyPaste:
             elif (img.shape[1] - bbox.shape[1] - 1) > 0:
                 
                 x1 = random.randrange(img.shape[1] - bbox.shape[1] - 1)
-                
+
             else:
                 
                 continue
             
+            if len(bbox.shape) != 3:
+                continue
 
             y2 = int(y1 + bbox.shape[0])
             x2 = int(x1 + bbox.shape[1])
@@ -431,6 +433,9 @@ class CutOut:
 def get_augmentations(opt):
     augmentations = []
     aug_names = opt['training']['augmentations']
+
+    if not aug_names:
+        return
 
     for name in aug_names:
         if name == 'imgaug':
