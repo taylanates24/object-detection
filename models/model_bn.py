@@ -3,6 +3,7 @@ import torch.nn as nn
 import timm
 import numpy as np
 import itertools
+from models.utils import Swish
 #timm.list_models(pretrained=True)
 #'hrnet_w64'
 #tf_efficientnet_b3.ns_jft_in1k
@@ -19,11 +20,13 @@ import itertools
 #'mobilenetv3_small_100.lamb_in1k' #CHECKED SLOW BAD
 #'tf_efficientnet_b0.ap_in1k' # CHECKED SLOWER GOOD
 #'tf_efficientnetv2_s.in1k'  # CHECKED SLOWER GOOD
+# 'efficientnet_l2' TRY
+# 'tf_efficientnet_l2' TRY
 class TyNet(nn.Module):
-    def __init__(self, num_classes=80, backbone='tf_efficientnet_lite0.in1k', out_size=64, nc=80, compound_coef=0, **kwargs) -> None:
+    def __init__(self, num_classes=80, backbone='tf_efficientnetv2_b0.in1k', out_size=64, nc=80, compound_coef=0, **kwargs) -> None:
         super(TyNet, self).__init__()
 
-        #avail_pretrained_models= timm.list_models(pretrained=True)
+        #avail_pretrained_models= timm.list_models()[600:]
         self.compound_coef = compound_coef
         self.anchor_scale = [4., 4., 4., 4., 4., 4., 4., 5., 4.]
         self.aspect_ratios = kwargs.get('ratios', [(1.0, 1.0), (1.4, 0.7), (0.7, 1.4)])
@@ -59,7 +62,7 @@ class TyNet(nn.Module):
 
 
 class TyNeck(nn.Module):
-    def __init__(self, layers=[512, 1024, 2048], out_size=64, procedure=[3, 4]) -> None:
+    def __init__(self, layers=[512, 1024, 2048], out_size=64, procedure=[2, 3]) -> None:
         super(TyNeck, self).__init__()
 
         self.out_layer1 = Conv(in_ch=layers[-1], out_ch=out_size * 2, k_size=3, s=1, p=1)
@@ -104,8 +107,8 @@ class TyHead(nn.Module):
     def __init__(self, out_size, anchor_scale, pyramid_levels, num_anchors=9, num_classes=80, num_layers=3, **kwargs):
         super(TyHead, self).__init__()
 
-        self.regressor = Regressor2(in_channels=out_size, num_anchors=num_anchors, num_layers=num_layers)
-        self.classifier = Classifier2(in_channels=out_size, num_anchors=9, num_classes=num_classes, num_layers=3)
+        self.regressor = Regressor(in_channels=out_size, num_anchors=num_anchors, num_layers=num_layers)
+        self.classifier = Classifier(in_channels=out_size, num_anchors=9, num_classes=num_classes, num_layers=3)
 
         self.anchors = Anchors(anchor_scale=anchor_scale,
                                pyramid_levels=pyramid_levels,
@@ -119,170 +122,17 @@ class TyHead(nn.Module):
         
         return x, regression, classification, anchors
 
+
+
 class Regressor(nn.Module):
-    """
-    modified by Zylo117
-    """
-
-    def __init__(self, in_channels, num_anchors, num_layers, pyramid_levels=5, onnx_export=False):
-        super(Regressor, self).__init__()
-        self.num_layers = num_layers
-
-        self.conv_list = nn.ModuleList(
-            [SeparableConvBlock(in_channels, in_channels, norm=False, activation=False) for i in range(num_layers)])
-        self.bn_list = nn.ModuleList(
-            [nn.ModuleList([nn.BatchNorm2d(in_channels, momentum=0.1, eps=1e-5) for i in range(num_layers)]) for j in
-             range(pyramid_levels)])
-        self.header = SeparableConvBlock(in_channels, num_anchors * 4, norm=False, activation=False)
-        self.swish = MemoryEfficientSwish() if not onnx_export else Swish()
-
-    def forward(self, inputs):
-        feats = [] 
-        for feat, bn_list in zip(inputs, self.bn_list):
-            for i, bn, conv in zip(range(self.num_layers), bn_list, self.conv_list):
-                feat = conv(feat)
-                feat = bn(feat)
-                feat = self.swish(feat)
-            feat = self.header(feat)
-
-            feat = feat.permute(0, 2, 3, 1)
-            feat = feat.contiguous().view(feat.shape[0], -1, 4)
-
-            feats.append(feat)
-
-        feats = torch.cat(feats, dim=1)
-
-        return feats
-    
-import math
-import torch.nn.functional as F
-class Conv2dStaticSamePadding(nn.Module):
-    """
-    created by Zylo117
-    The real keras/tensorflow conv2d with same padding
-    """
-
-    def __init__(self, in_channels, out_channels, kernel_size, stride=1, bias=True, groups=1, dilation=1, **kwargs):
-        super().__init__()
-        self.conv = nn.Conv2d(in_channels, out_channels, kernel_size, stride=stride,
-                              bias=bias, groups=groups)
-        self.stride = self.conv.stride
-        self.kernel_size = self.conv.kernel_size
-        self.dilation = self.conv.dilation
-
-        if isinstance(self.stride, int):
-            self.stride = [self.stride] * 2
-        elif len(self.stride) == 1:
-            self.stride = [self.stride[0]] * 2
-
-        if isinstance(self.kernel_size, int):
-            self.kernel_size = [self.kernel_size] * 2
-        elif len(self.kernel_size) == 1:
-            self.kernel_size = [self.kernel_size[0]] * 2
-
-    def forward(self, x):
-        h, w = x.shape[-2:]
-        
-        extra_h = (math.ceil(w / self.stride[1]) - 1) * self.stride[1] - w + self.kernel_size[1]
-        extra_v = (math.ceil(h / self.stride[0]) - 1) * self.stride[0] - h + self.kernel_size[0]
-        
-        left = extra_h // 2
-        right = extra_h - left
-        top = extra_v // 2
-        bottom = extra_v - top
-
-        x = F.pad(x, [left, right, top, bottom])
-
-        x = self.conv(x)
-        return x
-class SeparableConvBlock(nn.Module):
-    """
-    created by Zylo117
-    """
-
-    def __init__(self, in_channels, out_channels=None, norm=True, activation=False, onnx_export=False):
-        super(SeparableConvBlock, self).__init__()
-        if out_channels is None:
-            out_channels = in_channels
-
-        # Q: whether separate conv
-        #  share bias between depthwise_conv and pointwise_conv
-        #  or just pointwise_conv apply bias.
-        # A: Confirmed, just pointwise_conv applies bias, depthwise_conv has no bias.
-
-        self.depthwise_conv = Conv2dStaticSamePadding(in_channels, in_channels,
-                                                      kernel_size=3, stride=1, groups=in_channels, bias=False)
-        self.pointwise_conv = Conv2dStaticSamePadding(in_channels, out_channels, kernel_size=1, stride=1)
-
-        self.norm = norm
-        if self.norm:
-            # Warning: pytorch momentum is different from tensorflow's, momentum_pytorch = 1 - momentum_tensorflow
-            self.bn = nn.BatchNorm2d(num_features=out_channels, momentum=0.1, eps=1e-3,track_running_stats=False)
-
-        self.activation = activation
-        if self.activation:
-            self.swish = MemoryEfficientSwish() if not onnx_export else Swish()
-
-    def forward(self, x):
-        x = self.depthwise_conv(x)
-        x = self.pointwise_conv(x)
-
-        if self.norm:
-            x = self.bn(x)
-
-        if self.activation:
-            x = self.swish(x)
-
-        return x
-
-class Classifier(nn.Module):
-    """
-    modified by Zylo117
-    """
-
-    def __init__(self, in_channels, num_anchors, num_classes, num_layers, pyramid_levels=5, onnx_export=False):
-        super(Classifier, self).__init__()
-        self.num_anchors = num_anchors
-        self.num_classes = num_classes
-        self.num_layers = num_layers
-        self.conv_list = nn.ModuleList(
-            [SeparableConvBlock(in_channels, in_channels, norm=False, activation=False) for i in range(num_layers)])
-        self.bn_list = nn.ModuleList(
-            [nn.ModuleList([nn.BatchNorm2d(in_channels, momentum=0.1, eps=1e-3,track_running_stats=False) for i in range(num_layers)]) for j in
-             range(pyramid_levels)])
-        self.header = SeparableConvBlock(in_channels, num_anchors * num_classes, norm=False, activation=False)
-        self.swish = MemoryEfficientSwish() if not onnx_export else Swish()
-
-    def forward(self, inputs):
-        feats = []
-        for feat, bn_list in zip(inputs, self.bn_list):
-            for i, bn, conv in zip(range(self.num_layers), bn_list, self.conv_list):
-                feat = conv(feat)
-                feat = bn(feat)
-                feat = self.swish(feat)
-            feat = self.header(feat)
-
-            feat = feat.permute(0, 2, 3, 1)
-            feat = feat.contiguous().view(feat.shape[0], feat.shape[1], feat.shape[2], self.num_anchors,
-                                          self.num_classes)
-            feat = feat.contiguous().view(feat.shape[0], -1, self.num_classes)
-
-            feats.append(feat)
-
-        feats = torch.cat(feats, dim=1)
-        feats = feats.sigmoid()
-
-        return feats
-
-class Regressor2(nn.Module):
 
     def __init__(self, in_channels, num_anchors=9, num_layers=3, pyramid_levels=3) -> None:
-        super(Regressor2, self).__init__()
+        super(Regressor, self).__init__()
 
         self.conv_list = nn.Sequential(
             *[ConvBlock(in_channels, in_channels, norm_2=True, norm_1=False, activation=True) for i in range(num_layers)])
 
-        self.head_conv = ConvBlock(in_channels, num_anchors * 4, norm_1=False, norm_2=False, activation=False)
+        self.header = ConvBlock(in_channels, num_anchors * 4, norm_1=False, norm_2=False, activation=False)
 
         self.act = nn.SiLU()
 
@@ -292,7 +142,7 @@ class Regressor2(nn.Module):
         for feat in x: #    APPLY CSPNET
 
             feat = self.conv_list(feat)
-            feat = self.head_conv(feat)
+            feat = self.header(feat)
 
             feat = feat.permute(0, 2, 3, 1)
             feat = feat.contiguous().view(feat.shape[0], -1, 4)
@@ -304,10 +154,10 @@ class Regressor2(nn.Module):
 
 
 
-class Classifier2(nn.Module):
+class Classifier(nn.Module):
 
     def __init__(self, in_channels, num_anchors, num_classes, num_layers=3, pyramid_levels=3) -> None:
-        super(Classifier2, self).__init__()
+        super(Classifier, self).__init__()
 
         self.num_anchors = num_anchors
         self.num_classes = num_classes
@@ -348,9 +198,9 @@ class ScalableCSPResBlock(nn.Module):
         super(ScalableCSPResBlock, self).__init__()
 
         self.conv1 = nn.Conv2d(in_channels=in_ch, out_channels=in_ch * 2, kernel_size=3, stride=1, padding=1)
-        self.bn1 = nn.LayerNorm(in_ch * 2)
+        self.bn1 = nn.BatchNorm2d(num_features=in_ch * 2)
         self.conv2 = nn.Conv2d(in_channels=in_ch * 2, out_channels=in_ch * 2, kernel_size=1, stride=1, padding=0)
-        self.bn2 = nn.LayerNorm(in_ch * 2)
+        self.bn2 = nn.BatchNorm2d(num_features=in_ch * 2)
         basic_layers = []
 
         for _ in range(num_basic_layers):
@@ -361,13 +211,8 @@ class ScalableCSPResBlock(nn.Module):
         self.act = nn.SiLU()
 
     def forward(self, x):
-        x = self.conv1(x).permute(0, 2, 3, 1)
-        x = self.bn1(x).permute(0, 3, 1, 2)
-        x = self.act(x)
-        x = self.conv2(x).permute(0, 2, 3, 1)
-        x = self.bn2(x).permute(0, 3, 1, 2)
-        x = self.act(x)
-
+        x = self.act(self.bn1(self.conv1(x)))
+        x = self.act(self.bn2(self.conv2(x)))
 
         xs, xb = x.split(x.shape[1] // 2, dim=1)
         xb = self.basic_layers(xb)
@@ -382,16 +227,16 @@ class BasicBlock(nn.Module):
         super(BasicBlock, self).__init__()
 
         self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=(3, 3), stride=stride, padding=(1, 1), bias=False)
-        self.bn1 = nn.LayerNorm(out_channels)
+        self.bn1 = nn.BatchNorm2d(out_channels, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
         self.act = nn.SiLU()
         self.conv2 = nn.Conv2d(out_channels, out_channels, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1),
                                bias=False)
-        self.bn2 = nn.LayerNorm(out_channels)
+        self.bn2 = nn.BatchNorm2d(out_channels, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
 
         if downsample:
             self.downsample = nn.Sequential(
                 nn.Conv2d(in_channels, out_channels, kernel_size=(1, 1), stride=(2, 2), bias=False),
-                nn.LayerNorm(out_channels)
+                nn.BatchNorm2d(out_channels, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
             )
         else:
             self.downsample = None
@@ -399,11 +244,11 @@ class BasicBlock(nn.Module):
 
     def forward(self, x):
 
-        out = self.conv1(x).permute(0, 2, 3, 1)
-        out = self.bn1(out).permute(0, 3, 1, 2)
+        out = self.conv1(x)
+        out = self.bn1(out)
         out = self.act(out)
-        out = self.conv2(out).permute(0, 2, 3, 1)
-        out = self.bn2(out).permute(0, 3, 1, 2)
+        out = self.conv2(out)
+        out = self.bn2(out)
 
         if self.downsample is not None:
             x = self.downsample(x)
@@ -422,15 +267,14 @@ class Conv(nn.Module):
         self.conv = nn.Conv2d(in_channels=in_ch, out_channels=out_ch, kernel_size=k_size, stride=s, padding=p, bias=bias)
 
         if norm:
-            self.bn = nn.LayerNorm(out_ch)
+            self.bn = nn.BatchNorm2d(num_features=out_ch)
 
 
     def forward(self, x):
 
         if self.norm:
-            x = self.conv(x).permute(0, 2, 3, 1)
-            x = self.bn(x).permute(0, 3, 1, 2)
-            return x
+
+            return self.bn(self.conv(x))
 
         else:
 
@@ -449,7 +293,7 @@ class ConvBlock(nn.Module):
 
         if self.activation:
             self.act = nn.SiLU()
-        #self.bn = nn.LayerNorm(out_channel)
+        self.bn = nn.BatchNorm2d(out_channel)
 
     def forward(self, x):
 
