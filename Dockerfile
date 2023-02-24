@@ -41,9 +41,14 @@ RUN pip --no-cache-dir install \
 	pyyaml \
       neptune-client
 
-#RUN pip install timm
+RUN pip install timm
 
 RUN git clone https://github.com/rwightman/pytorch-image-models.git && cd pytorch-image-models && pip install -e .
 RUN ln -sf /usr/share/zoneinfo/Turkey /etc/localtime
 
+RUN pip install imgaug
+
+RUN pip install seaborn>=0.11.0
+RUN pip install pytorch-lightning
+RUN pip3 install tensorboardX
 WORKDIR /workspace
