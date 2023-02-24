@@ -10,7 +10,7 @@ class Augmentations:
     
     def __init__(self, opt) -> None:
         
-        opt = opt['augmentations']
+        opt = opt['imgaug']
         
         self.debug = False
         num_aug = opt['num_aug']
@@ -77,7 +77,7 @@ class Augmentations:
             
             bboxes_iaa = BoundingBoxesOnImage([], img.shape).from_xyxy_array(bboxes, img.shape)
             image_after = bboxes_iaa.draw_on_image(img, size=2)
-            cv2.imwrite('image_after.jpg', image_after)
+            cv2.imwrite('image_imgaug.jpg', image_after)
 
         labels = np.concatenate((bboxes, np.expand_dims(category_ids, 1)),1)
 
@@ -90,8 +90,9 @@ class CopyPaste:
     
     def __init__(self, opt=None) -> None:
         
+        self.debug = False
         opt = opt['copy_paste']
-        self.ioa_thr = opt['threshold']
+        self.ioa_thr = opt['box_augments']['threshold']
         
         self.bboxes_len = opt['bboxes_memory']
         self.paste_len = opt['pasted_bbox_number']
@@ -257,6 +258,12 @@ class CopyPaste:
         bboxes = np.concatenate((bboxes, new_boxes), 0)
         category_ids = np.concatenate((category_ids, new_category_ids), 0)
         
+        if self.debug:
+            
+            bboxes_iaa = BoundingBoxesOnImage([], img.shape).from_xyxy_array(bboxes, img.shape)
+            image_after = bboxes_iaa.draw_on_image(img, size=2)
+            cv2.imwrite('image_copypaste.jpg', image_after)
+
         self.boxes_w_labels = np.concatenate((self.boxes_w_labels, cropped_boxes), 0)
         self.check_bbox_memory()
         self.shuffle_bboxes()
@@ -341,7 +348,7 @@ def inter_over_area(bboxes1, bboxes2):
 class CutOut:
 
     def __init__(self, opt):
-        self.debug = True
+        self.debug = False
         opt = opt['cutout']
         percentages = opt['percentages']
         fill_type = opt['fill_type']
@@ -408,13 +415,29 @@ class CutOut:
             else:
                 
                 i += 1
+
         if self.debug:
             
             bboxes_iaa = BoundingBoxesOnImage([], img.shape).from_xyxy_array(bboxes, img.shape)
             image_after = bboxes_iaa.draw_on_image(img, size=2)
-            cv2.imwrite('image_after.jpg', image_after)
+            cv2.imwrite('image_cutout.jpg', image_after)
             
         labels = np.concatenate((bboxes, np.expand_dims(category_ids, 1)),1)
         img_data = {'img': img, 'labels': labels}
         
         return img_data
+
+
+def get_augmentations(opt):
+    augmentations = []
+    aug_names = opt['training']['augmentations']
+
+    for name in aug_names:
+        if name == 'imgaug':
+            augmentations.append(Augmentations(opt))
+        elif name == 'copy_paste':
+            augmentations.append(CopyPaste(opt))
+        elif name == 'cutout':
+            augmentations.append(CutOut(opt))
+    
+    return augmentations
