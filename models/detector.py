@@ -1,7 +1,7 @@
 import pytorch_lightning as pl
 import torch.nn as nn
 import torch
-from loss import FocalLoss
+from models.loss import FocalLoss
 
 class Detector(pl.LightningModule):
     
@@ -18,17 +18,20 @@ class Detector(pl.LightningModule):
         else:
             self.loss = loss
             
-    def forward(self, images, labels):
-        
-        return self.model(x)
+    def forward(self, images):
+
+
+        return self.model(images)
 
     def training_step(self, train_batch, batch_idx):
 
-        images = data['img']
-        labels = data['labels']
+        images = train_batch['img']
+        labels = train_batch['labels']
 
-        output = self.forward(images, labels)
-        cls_loss, reg_loss = self.loss(classification, regression, anchors, annotations)
+        _, regression, classification, anchors = self.forward(images)
+        cls_loss, reg_loss = self.loss(classification, regression, anchors, labels)
+        reg_loss = reg_loss.mean()
+        cls_loss = cls_loss.mean()
         total_loss = cls_loss + reg_loss
 
         self.log('learning rate', self.scheduler.get_lr()[0])
@@ -51,11 +54,13 @@ class Detector(pl.LightningModule):
 
     def validation_step(self, val_batch, batch_idx):
 
-        images = data['img']
-        labels = data['labels']
+        images = val_batch['img']
+        labels = val_batch['labels']
 
-        output = self.forward(images, labels)
-        cls_loss, reg_loss = self.loss(classification, regression, anchors, annotations)
+        _, regression, classification, anchors = self.forward(images)
+        cls_loss, reg_loss = self.loss(classification, regression, anchors, labels)
+        reg_loss = reg_loss.mean()
+        cls_loss = cls_loss.mean()
         total_loss = cls_loss + reg_loss
 
         return {'loss':total_loss,  'cls_loss': cls_loss, 'reg_loss': reg_loss}
