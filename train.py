@@ -63,6 +63,7 @@ if __name__ == '__main__':
                         normalize=opt['training']['normalize'], 
                         augmentations=None)
 
+    
     train_loader = DataLoader(train_dataset, **training_params)
 
     val_loader = DataLoader(val_dataset, **val_params)
@@ -80,5 +81,5 @@ if __name__ == '__main__':
     
     trainer.fit(model=detector, 
                 train_dataloaders=train_loader, 
-                val_dataloaders=train_loader)
+                val_dataloaders=val_loader)
                 
