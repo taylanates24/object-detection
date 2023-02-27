@@ -27,6 +27,34 @@ project/
 
 ```
 ## Getting Started
+To get started with TyNet, follow these steps:
+
+1- Clone this repository to your local machine.
+
+```
+git clone https://github.com/taylanates24/object-detection.git
+```
+2 - Build a docker image 
+
+```
+docker build -t tynet:v1 -f Dockerfile .
+```
+
+3- Create a container from docker image 
+
+```
+docker run -v $(pwd):/workspace -it --rm --ipc host tynet:v1
+```
+
+4 - Prepare your dataset in the COCO format.
+
+5 - Modify the configuration file training.yaml to match your dataset, hyperparameters and data augmentations.
+
+6 - Run 
+```
+python train.py
+```
+to start training the model.
 
 ## Data Preprocessing
 
