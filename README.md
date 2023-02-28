@@ -80,6 +80,13 @@ It is my implementation of "Simple Copy-Paste is a Strong Data Augmentation Meth
 
 ### Backbone
 
+ As a backbone, I implement a changable structure. You can use whatever backbone in the `timm` library, pre-trained or not. For example, the list of pre-trained backbones can be obtained by using the folloving code:
+ 
+```
+import timm
+
+available_backbones = timm.list_models(pretrained=True)
+```
 
 ### Neck
 As a neck, I designed an FPN structure, whic uses addition as fusion type. 
