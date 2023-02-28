@@ -58,6 +58,8 @@ to start training the model.
 
 ## Data Preprocessing
 
+TyNet uses the COCO dataset format for annotations. The data/coco_dataset.py script loads the images and annotations and preprocesses them for training.
+
 ## Model Architecture
 
 ## Training
