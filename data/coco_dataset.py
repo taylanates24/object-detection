@@ -7,10 +7,9 @@ from pycocotools.coco import COCO
 import os
 import cv2
 import numpy as np
-from augmentations import Augmentations, CopyPaste, CutOut
-from process_box import x1y1_to_xcyc, x1y1wh_to_xyxy, xyxy_to_x1y1wh, normalize_bboxes, resize_bboxes, adjust_bboxes
-import imgaug.augmenters as iaa
-from imgaug.augmentables.bbs import BoundingBoxesOnImage
+from data.augmentations import Augmentations, CopyPaste, CutOut
+from data.process_box import x1y1_to_xcyc, x1y1wh_to_xyxy, xyxy_to_x1y1wh, normalize_bboxes, resize_bboxes, adjust_bboxes
+
 
 
 class CustomDataset(Dataset):
@@ -21,9 +20,7 @@ class CustomDataset(Dataset):
         self.image_root = os.path.join('/', *image_path.split('/')[:-1])
         self.image_path = image_path
         self.annotation_path = annotation_path
-        self.normalize = False
-        import json
-        annot = json.load(open(annotation_path))
+        self.normalize = normalize
         self.coco = COCO(self.annotation_path)
         self.image_paths = sorted(os.listdir(self.image_path))
         self.ids = sorted(list(self.coco.imgs.keys()))
@@ -60,10 +57,7 @@ class CustomDataset(Dataset):
 
         img, ratio = self.load_image(image_id)
         labels = self.load_labels(image_id=image_id, ratio=ratio)
-        bboxes = np.array(img_data['labels'][:,:4])
-        bboxes_iaa = BoundingBoxesOnImage([], img.shape).from_xyxy_array(bboxes, img.shape)
-        image_after = bboxes_iaa.draw_on_image(img, size=2)
-        cv2.imwrite('./labelled/image_' + str(index) + '.jpg', image_after)
+        
         if self.augmentations:
             
             img_data = {'img': img, 'labels':labels}
