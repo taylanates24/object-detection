@@ -78,6 +78,21 @@ It is my implementation of "Simple Copy-Paste is a Strong Data Augmentation Meth
 
 ## Model Architecture
 
+### Backbone
+
+
+### Neck
+
+### Head
+
+This is my implementation of bounding box regression head. Each `Conv2d` consists of one 3x3 Conv2d and one 1x1 Conv2d. At the end, there will be 1xNx4 dimensional tensor, N proposals coordinate for each bbox coordinate.
+
+![classification](https://user-images.githubusercontent.com/66252663/221974242-17bdcc6a-6c83-40b2-b578-d7d37edcb3dd.jpg)
+
+This is my implementation of bounding box classification head. Similarly, each `Conv2d` consists of one 3x3 Conv2d and one 1x1 Conv2d. At the end, there will be 1xNx80 dimensional tensor, N class probabilities for each class in COCO dataset.
+
+![classification_corrected](https://user-images.githubusercontent.com/66252663/221975023-3c9aa045-0d61-4ec0-a32c-8a91801f6426.jpg)
+
 ## Training
 
 ## Testing and Evaluation
