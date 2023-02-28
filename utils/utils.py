@@ -14,7 +14,6 @@ from torch import nn
 from torch.nn.init import _calculate_fan_in_and_fan_out, _no_grad_normal_
 from torchvision.ops.boxes import batched_nms
 
-from utils.sync_batchnorm import SynchronizedBatchNorm2d
 
 
 def invert_affine(metas: Union[float, list, tuple], preds):
@@ -149,37 +148,6 @@ def display(preds, imgs, obj_list, imshow=True, imwrite=False):
         if imwrite:
             os.makedirs('test/', exist_ok=True)
             cv2.imwrite(f'test/{uuid.uuid4().hex}.jpg', imgs[i])
-
-
-def replace_w_sync_bn(m):
-    for var_name in dir(m):
-        target_attr = getattr(m, var_name)
-        if type(target_attr) == torch.nn.BatchNorm2d:
-            num_features = target_attr.num_features
-            eps = target_attr.eps
-            momentum = target_attr.momentum
-            affine = target_attr.affine
-
-            # get parameters
-            running_mean = target_attr.running_mean
-            running_var = target_attr.running_var
-            if affine:
-                weight = target_attr.weight
-                bias = target_attr.bias
-
-            setattr(m, var_name,
-                    SynchronizedBatchNorm2d(num_features, eps, momentum, affine))
-
-            target_attr = getattr(m, var_name)
-            # set parameters
-            target_attr.running_mean = running_mean
-            target_attr.running_var = running_var
-            if affine:
-                target_attr.weight = weight
-                target_attr.bias = bias
-
-    for var_name, children in m.named_children():
-        replace_w_sync_bn(children)
 
 
 class CustomDataParallel(nn.DataParallel):
