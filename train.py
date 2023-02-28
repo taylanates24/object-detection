@@ -1,6 +1,6 @@
 import pytorch_lightning as pl
 import yaml
-from my_model.model import TyNet
+from models.model import TyNet
 from utils.utils import init_weights
 import argparse
 from data.coco_dataset import CustomDataset, collater

@@ -36,7 +36,7 @@ training:
   annotation_path: '/workspaces/object-detection/datasets/coco128/labels/train2017/coco_annotations/coco128_train.json'
   image_size: 480
   normalize: True
-  augmentations: ['imgaug', 'copy_paste', 'cutout']
+  augmentations: ['imgaug', 'cutout']
   batch_size: 1
   shuffle: False
   num_workers: 0
