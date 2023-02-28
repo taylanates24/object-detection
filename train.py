@@ -54,7 +54,7 @@ if __name__ == '__main__':
     train_dataset = CustomDataset(image_path=opt['training']['image_path'], 
                         annotation_path=opt['training']['annotation_path'], 
                         image_size=opt['training']['image_size'], 
-                        normalize=opt['training']['normalize'],, 
+                        normalize=opt['training']['normalize'],
                         augmentations=augmentations)
     
     val_dataset = CustomDataset(image_path=opt['validation']['image_path'], 
