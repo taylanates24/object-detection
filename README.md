@@ -60,6 +60,22 @@ to start training the model.
 
 TyNet uses the COCO dataset format for annotations. The data/coco_dataset.py script loads the images and annotations and preprocesses them for training.
 
+### Augmentations
+
+#### imgaug
+
+I add some geometric and color augmentations from imgaug library. You can chance the number of augmentations in one time, the values and the variation of the augmentations by changing ```imgaug``` values in ```training.yaml``` file.
+
+For example if you want to use random horizontal flip and scale only, the num_aug should be 2, fliplr should be the probability if the augmentation, scale should be a list of range and all the other imgaug augmentations should be ```null```
+
+#### CutOut
+
+It is my implementation of "Improved Regularization of Convolutional Neural Networks with Cutout" (https://arxiv.org/abs/1708.04552) paper with some improvements. In my implementation, you can change the filled boxes which cutted out. You can fill it with gaussian noise, random colors, and white, black, and gray boxes to the cutting area. You can also change the number of cutouts and their scale with respect to the height of the image by changing `cutout` `percentages` values in the `training.yaml` file.
+
+#### Copy Paste
+
+It is my implementation of "Simple Copy-Paste is a Strong Data Augmentation Method for Instance Segmentation" (https://arxiv.org/abs/2012.07177) paper with some improvements. In this implementation, you can aplly bounding box augmentations by changing copy_paste: box_augments: variable in ```training.yaml``` file. The bounding box augmentations only applied to the number of pasted boxes and at most 1 augmentation is applied at one time. You can also change the pasted boxes by changing `pasted_bbox_number` value in `training.yaml`
+
 ## Model Architecture
 
 ## Training
