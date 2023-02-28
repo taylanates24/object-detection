@@ -100,7 +100,7 @@ Additionally, I desing a simple but effective and computationally cheap, scalebl
 
 ### Head
 
-This is my implementation of bounding box regression head. Each `Conv2d` consists of one 3x3 Conv2d and one 1x1 Conv2d. At the end, there will be 1xNx4 dimensional tensor, N proposals coordinate for each bbox coordinate.
+This is my implementation of bounding box regression head. Each `Conv2d` consists of one 3x3 Conv2d and one 1x1 Conv2d. At the end, there will be 1xNx4 dimensional tensor, N proposal coordinates for each bbox coordinate.
 
 ![classification](https://user-images.githubusercontent.com/66252663/221974242-17bdcc6a-6c83-40b2-b578-d7d37edcb3dd.jpg)
 
