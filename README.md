@@ -89,7 +89,7 @@ available_backbones = timm.list_models(pretrained=True)
 ```
 
 ### Neck
-As a neck, I designed an FPN structure, whic uses addition as fusion type. 
+As a neck, I designed an FPN structure, which uses addition as fusion type. 
 
 ![fpn_arch (copy) drawio](https://user-images.githubusercontent.com/66252663/221975984-fec13a49-b66b-4f35-b837-78278b434868.png)
 
