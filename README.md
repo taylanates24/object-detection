@@ -51,7 +51,18 @@ python3 -m venv tynet
 source tynet/bin/activate
 pip3 install -r requirements.txt
 ```
-4 - Prepare your dataset in the COCO format.
+4 - Prepare your dataset in the COCO format or if you want a small dataset to quickly build the environment, run the following code to download coco128 dataset. (the first 128 images and labels from coco2017 dataset)
+
+```
+chmod +x get_coco128.sh
+./get_coco128.sh
+
+```
+After that, you have to convert the dataset format to COCO format by running the following code:
+
+```
+python3 data/yolo_to_coco.py --yolo_annotations ../datasets/coco128/labels/train2017 --yolo_img ../datasets/coco128/images/train2017 --coco_names ../datasets/coco.names --out_file_name coco128_train.json --check True
+```
 
 5 - Modify the configuration file training.yaml to match your dataset, hyperparameters and data augmentations.
 
@@ -117,4 +128,8 @@ This is my implementation of bounding box classification head. Similarly, each `
 
 ## Testing and Evaluation
 
+Coming soon
+
 ## Conclusion and Future Work
+
+The head part of the model will be written by using CSPNet to have a more accurate and fast head part.
