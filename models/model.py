@@ -3,19 +3,21 @@ import torch.nn as nn
 import timm
 import numpy as np
 import itertools
+from typing import List, Callable, Tuple
 
 class TyNet(nn.Module):
-    def __init__(self, num_classes=80, backbone='tf_efficientnet_lite0.in1k', out_size=64, nc=80, compound_coef=0, **kwargs) -> None:
+    def __init__(self, num_classes: int=80, backbone: str='tf_efficientnet_lite0.in1k', out_size: int=64, **kwargs) -> None:
+        
         super(TyNet, self).__init__()
 
         #avail_pretrained_models= timm.list_models(pretrained=True)
-        self.compound_coef = compound_coef
-        self.anchor_scale = [4., 4., 4., 4., 4., 4., 4., 5., 4.]
+
+        self.anchor_scale = 4.0
         self.aspect_ratios = kwargs.get('ratios', [(1.0, 1.0), (1.4, 0.7), (0.7, 1.4)])
         self.num_scales = len(kwargs.get('scales', [2 ** 0, 2 ** (1.0 / 3.0), 2 ** (2.0 / 3.0)]))
 
         self.num_classes = num_classes
-        self.pyramid_levels = [3]
+        self.pyramid_level = 3
         self.backbone = timm.create_model(backbone, pretrained=True, features_only=True)
         x=torch.randn(1,3,224,224)
         out=self.backbone(x)
@@ -24,10 +26,10 @@ class TyNet(nn.Module):
 
         self.neck = TyNeck(layers=layers, out_size=out_size)
         
-        self.head = TyHead(out_size=out_size, num_anchors=9, num_classes=num_classes, num_layers=3, anchor_scale=self.anchor_scale[compound_coef],
-                           pyramid_levels=(torch.arange(self.pyramid_levels[self.compound_coef]) + 3).tolist(), **kwargs)
+        self.head = TyHead(out_size=out_size, num_anchors=9, num_classes=num_classes, num_layers=3, anchor_scale=self.anchor_scale,
+                           pyramid_levels=(torch.arange(self.pyramid_level) + 3).tolist(), **kwargs)
         
-    def forward(self, inputs):
+    def forward(self, inputs: torch.tensor) -> Tuple:
 
         x = self.backbone(inputs)[-3:]
         x = self.neck(x)
@@ -37,7 +39,7 @@ class TyNet(nn.Module):
 
 
 class TyNeck(nn.Module):
-    def __init__(self, layers=[512, 1024, 2048], out_size=64, procedure=[3, 4]) -> None:
+    def __init__(self, layers: List[int]=[512, 1024, 2048], out_size: int=64, procedure: List[int]=[3, 4]) -> None:
         super(TyNeck, self).__init__()
 
         self.out_layer1 = Conv(in_ch=layers[-1], out_ch=out_size * 2, k_size=3, s=1, p=1)
@@ -56,13 +58,13 @@ class TyNeck(nn.Module):
 
         self.act = nn.SiLU()
 
-    def upsample_add(self, x, y):
+    def upsample_add(self, x: torch.tensor, y: torch.tensor) -> torch.tensor:
 
         y = self.act(self.upconv_dict[str(y.shape[1])](y))
 
         return self.upsample(x) + y
 
-    def forward(self, inputs):
+    def forward(self, inputs: List[torch.tensor]) -> List[torch.tensor]:
 
         x = inputs.pop(-1)
 
@@ -79,7 +81,13 @@ class TyNeck(nn.Module):
         return outs
 
 class TyHead(nn.Module):
-    def __init__(self, out_size, anchor_scale, pyramid_levels, num_anchors=9, num_classes=80, num_layers=3, **kwargs):
+    def __init__(self, 
+                 out_size: int, 
+                 anchor_scale: float, 
+                 pyramid_levels: List[int], 
+                 num_anchors: int=9, 
+                 num_classes: int=80, 
+                 num_layers: int=3, **kwargs) -> None:
         super(TyHead, self).__init__()
 
         self.regressor = Regressor(in_channels=out_size, num_anchors=num_anchors, num_layers=num_layers)
@@ -89,7 +97,7 @@ class TyHead(nn.Module):
                                pyramid_levels=pyramid_levels,
                                **kwargs)
         
-    def forward(self, x, inputs, dtype):
+    def forward(self, x: List[torch.tensor], inputs: torch.tensor, dtype: torch.dtype) -> Tuple[List[torch.tensor], torch.tensor, torch.tensor, torch.tensor]:
         
         regression = self.regressor(x)
         classification = self.classifier(x)
@@ -100,7 +108,7 @@ class TyHead(nn.Module):
 
 class Regressor(nn.Module):
 
-    def __init__(self, in_channels, num_anchors=9, num_layers=3, pyramid_levels=3) -> None:
+    def __init__(self, in_channels: int, num_anchors: int=9, num_layers: int=3) -> None:
         super(Regressor, self).__init__()
 
         self.conv_list = nn.Sequential(
@@ -111,7 +119,7 @@ class Regressor(nn.Module):
         self.act = nn.SiLU()
 
 
-    def forward(self, x):
+    def forward(self, x: List[torch.tensor]) -> torch.tensor:
         feats = []
         for feat in x: #    APPLY CSPNET
 
@@ -130,7 +138,7 @@ class Regressor(nn.Module):
 
 class Classifier(nn.Module):
 
-    def __init__(self, in_channels, num_anchors, num_classes, num_layers=3, pyramid_levels=3) -> None:
+    def __init__(self, in_channels: int, num_anchors: int, num_classes:int, num_layers:int=3) -> None:
         super(Classifier, self).__init__()
 
         self.num_anchors = num_anchors
@@ -146,7 +154,7 @@ class Classifier(nn.Module):
 
 
 
-    def forward(self, x):
+    def forward(self, x: List[torch.tensor]) -> torch.tensor:
 
 
         feats = []
@@ -168,7 +176,7 @@ class Classifier(nn.Module):
 
 class ScalableCSPResBlock(nn.Module):
 
-    def __init__(self, in_ch=512, num_basic_layers=1) -> None:
+    def __init__(self, in_ch: int=512, num_basic_layers: int=1) -> None:
         super(ScalableCSPResBlock, self).__init__()
 
         self.conv1 = nn.Conv2d(in_channels=in_ch, out_channels=in_ch * 2, kernel_size=3, stride=1, padding=1)
@@ -184,10 +192,12 @@ class ScalableCSPResBlock(nn.Module):
         self.transition = nn.Conv2d(in_ch * 2, in_ch, kernel_size=1, stride=1, padding=0)
         self.act = nn.SiLU()
 
-    def forward(self, x):
+    def forward(self, x: torch.tensor) -> torch.tensor:
+        
         x = self.conv1(x).permute(0, 2, 3, 1)
         x = self.bn1(x).permute(0, 3, 1, 2)
         x = self.act(x)
+        
         x = self.conv2(x).permute(0, 2, 3, 1)
         x = self.bn2(x).permute(0, 3, 1, 2)
         x = self.act(x)
@@ -202,7 +212,7 @@ class ScalableCSPResBlock(nn.Module):
 
 
 class BasicBlock(nn.Module):
-    def __init__(self, in_channels, out_channels, stride=1, downsample=False):
+    def __init__(self, in_channels: int, out_channels: int, stride: int=1, downsample: bool=False) ->None:
         super(BasicBlock, self).__init__()
 
         self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=(3, 3), stride=stride, padding=(1, 1), bias=False)
@@ -221,11 +231,12 @@ class BasicBlock(nn.Module):
             self.downsample = None
         self.out_channels = out_channels
 
-    def forward(self, x):
+    def forward(self, x: torch.tensor) -> torch.tensor:
 
         out = self.conv1(x).permute(0, 2, 3, 1)
         out = self.bn1(out).permute(0, 3, 1, 2)
         out = self.act(out)
+        
         out = self.conv2(out).permute(0, 2, 3, 1)
         out = self.bn2(out).permute(0, 3, 1, 2)
 
@@ -239,7 +250,7 @@ class BasicBlock(nn.Module):
 
 
 class Conv(nn.Module):
-    def __init__(self, in_ch, out_ch, k_size=3, s=1, p=0, upsample=False, act=nn.Mish(), norm=True, bias=True) -> None:
+    def __init__(self, in_ch: int, out_ch: int, k_size: int=3, s: int=1, p: int=0, act: Callable=nn.Mish(), norm: bool=True, bias: bool=True) -> None:
         super(Conv, self).__init__()
 
         self.norm = norm
@@ -249,7 +260,7 @@ class Conv(nn.Module):
             self.bn = nn.LayerNorm(out_ch)
 
 
-    def forward(self, x):
+    def forward(self, x: torch.tensor) -> torch.tensor:
 
         if self.norm:
             x = self.conv(x).permute(0, 2, 3, 1)
@@ -263,7 +274,7 @@ class Conv(nn.Module):
 
 class ConvBlock(nn.Module):
 
-    def __init__(self, in_channel, out_channel, norm_1, norm_2, activation) -> None:
+    def __init__(self, in_channel: int, out_channel: int, norm_1: bool, norm_2: bool, activation: bool) -> None:
         super().__init__()
 
         self.activation = activation
@@ -275,7 +286,7 @@ class ConvBlock(nn.Module):
             self.act = nn.SiLU()
         #self.bn = nn.LayerNorm(out_channel)
 
-    def forward(self, x):
+    def forward(self, x: torch.tensor) -> torch.tensor:
 
         x = self.conv1(x)
         x = self.conv2(x)
