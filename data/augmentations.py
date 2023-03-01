@@ -3,13 +3,13 @@ from imgaug.augmentables.bbs import BoundingBoxesOnImage
 import numpy as np
 import random
 import cv2
-
-#TODO handle no bbox case
+from typing import List, Callable, Dict
+#TODO handle no bbox case in copy paste
 
 class Augmentations:
     
-    def __init__(self, opt) -> None:
-        
+    def __init__(self, opt: Dict[str, str]) -> None:
+
         opt = opt['imgaug']
         
         self.debug = False
@@ -61,8 +61,8 @@ class Augmentations:
             
             self.seq = iaa.SomeOf(n=num_aug, children=augmentations)
         
-    def __call__(self, img_data):
-        
+    def __call__(self, img_data: Dict[str, np.ndarray]) -> Dict[str, np.ndarray]:
+
         img = img_data['img']
         bboxes = np.array(img_data['labels'][:,:4])
         category_ids = img_data['labels'][:,4]
@@ -88,7 +88,8 @@ class Augmentations:
     
 class CopyPaste:
     
-    def __init__(self, opt=None) -> None:
+    def __init__(self, opt: Dict[str, str]) -> None:
+
         
         self.debug = False
         opt = opt['copy_paste']
@@ -137,7 +138,8 @@ class CopyPaste:
             self.bbox_augmentations = None
 
 
-    def __call__(self, img_data):
+    def __call__(self, img_data: Dict[str, np.ndarray]) -> Dict[str, np.ndarray]:
+
 
         img = img_data['img']
         bboxes = img_data['labels'][:,:4]
@@ -277,7 +279,7 @@ class CopyPaste:
 
 
 
-    def check_bbox_memory(self):
+    def check_bbox_memory(self) -> None:
         
         if len(self.boxes_w_labels) > self.bboxes_len:
 
@@ -285,23 +287,23 @@ class CopyPaste:
 
             self.boxes_w_labels = self.boxes_w_labels[diff:]
             
-    def shuffle_bboxes(self):
+    def shuffle_bboxes(self) -> None:
         
         np.random.shuffle(self.boxes_w_labels)
 
 
-    def get_bbox(self, img, bboxes, category_id):
+    def get_bbox(self, img: np.ndarray, bboxes: np.ndarray, category_id: np.ndarray) -> np.ndarray:
 
         cropped_bbox = []
 
         for i, bbox in enumerate(bboxes):
 
-            cropped_bbox.append([int(category_id[i]), self.crop_bbox(img, bbox, i)])
+            cropped_bbox.append([int(category_id[i]), self.crop_bbox(img, bbox)])
             
 
         return np.array(cropped_bbox, dtype=object)
 
-    def crop_bbox(self, img, bbox, i):
+    def crop_bbox(self, img: np.ndarray, bbox: np.ndarray) -> np.ndarray:
         
         x1 = int(bbox[0])
         y1 = int(bbox[1])
@@ -313,11 +315,27 @@ class CopyPaste:
 
 
 
-def calc_bbox_area(bboxes):
+def calc_bbox_area(bboxes: np.ndarray) -> float:
+    """_summary_
+
+    Args:
+        bboxes (np.ndarray): _description_
+
+    Returns:
+        float: _description_
+    """
     
     return np.max((bboxes[:,2] - bboxes[:,0]) * (bboxes[:,3] - bboxes[:,1]))
 
-def calc_img_area(images):
+def calc_img_area(images: np.ndarray) -> float:
+    """_summary_
+
+    Args:
+        images (np.ndarray): _description_
+
+    Returns:
+        float: _description_
+    """
     
     max_area = 0
     
@@ -332,7 +350,7 @@ def calc_img_area(images):
     return max_area
     
     
-def inter_over_area(bboxes1, bboxes2):
+def inter_over_area(bboxes1: np.ndarray, bboxes2: np.ndarray) -> float:
 
     x11, y11, x12, y12 = np.split(bboxes1, 4, axis=1)
     x21, y21, x22, y22 = np.split(bboxes2, 4, axis=1)
@@ -349,7 +367,8 @@ def inter_over_area(bboxes1, bboxes2):
 
 class CutOut:
 
-    def __init__(self, opt):
+    def __init__(self, opt: Dict[str, str]) -> None:
+
         self.debug = False
         opt = opt['cutout']
         percentages = opt['percentages']
@@ -359,7 +378,7 @@ class CutOut:
         types = ['gaussian_noise', 'random_color', 'white', 'black', 'gray']
         self.fill_type = types[fill_type]
 
-    def __call__(self, img_data):
+    def __call__(self, img_data: Dict[str, np.ndarray]) -> Dict[str, np.ndarray]:
 
         img = img_data['img']
         bboxes = img_data['labels'][:,:4]
@@ -430,7 +449,8 @@ class CutOut:
         return img_data
 
 
-def get_augmentations(opt):
+def get_augmentations(opt: Dict[str, str]) -> List[Callable]:
+
     augmentations = []
     aug_names = opt['training']['augmentations']
 

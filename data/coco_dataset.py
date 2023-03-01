@@ -9,12 +9,18 @@ import cv2
 import numpy as np
 from data.augmentations import Augmentations, CopyPaste, CutOut
 from data.process_box import x1y1_to_xcyc, x1y1wh_to_xyxy, xyxy_to_x1y1wh, normalize_bboxes, resize_bboxes, adjust_bboxes
-
+from typing import List, Callable, Dict, Tuple
 
 
 class CustomDataset(Dataset):
 
-    def __init__(self, image_path, annotation_path, image_size=640, normalize=True, augment=False, augmentations=None) -> None:
+    def __init__(self, image_path: str, 
+                 annotation_path: str, 
+                 image_size: int=640, 
+                 normalize: bool=True, 
+                 augmentations: List[Callable]=None
+                 ) -> None:
+
         super(CustomDataset, self).__init__()
         
         self.image_root = os.path.join('/', *image_path.split('/')[:-1])
@@ -45,14 +51,13 @@ class CustomDataset(Dataset):
             ])
             
     
-    def __len__(self):
+    def __len__(self) -> int:
         
         return len(self.ids)
     
     
-    def __getitem__(self, index):
-        
-        
+    def __getitem__(self, index: int) -> Dict[str, torch.tensor]:
+     
         image_id = self.ids[index]
 
         img, ratio = self.load_image(image_id)
@@ -87,7 +92,7 @@ class CustomDataset(Dataset):
         return sample
     
     
-    def load_image(self, img_id):
+    def load_image(self, img_id: int) -> Tuple[np.ndarray, float]:
         
         img_path = self.coco.loadImgs(img_id)[0]['file_name']
         img = cv2.imread(os.path.join(self.image_path, img_path))
@@ -102,9 +107,8 @@ class CustomDataset(Dataset):
 
         return img, ratio
         
-    def load_labels(self, image_id, ratio):
         
-        
+    def load_labels(self, image_id: int, ratio: float) -> np.ndarray:
         
         annotations = self.coco.imgToAnns[image_id]
         
@@ -128,12 +132,9 @@ class CustomDataset(Dataset):
         labels[:, :4] = x1y1wh_to_xyxy(labels[:,:4])
         
         return labels
-        
-        
-
     
     
-    def letter_box(self, img, size):
+    def letter_box(self, img: np.ndarray, size: int) -> Tuple[np.ndarray, float, float]:
         
         box = np.full([size, size, img.shape[2]], 127)
         h, w = img.shape[:2]
@@ -151,8 +152,7 @@ class CustomDataset(Dataset):
         return box, w_diff / 2, h_diff / 2
         
         
-        
-    def get_statistics(self):
+    def get_statistics(self) -> Tuple[List[float]]:
         
         transform = transforms.Compose([
             transforms.ToTensor()
@@ -179,12 +179,13 @@ class CustomDataset(Dataset):
         return mean, std
 
 
-def collater(data):
+def collater(data: List[Dict[str, torch.tensor]]) -> Dict[str, torch.tensor]:
+    
     imgs = [s['img'] for s in data]
     annots = [torch.tensor(s['labels']) for s in data]
     scales = [s['scale'] for s in data]
 
-    imgs = torch.from_numpy(np.stack(imgs, axis=0))
+    imgs = torch.cat(imgs, 0).unsqueeze(0)
 
     max_num_annots = max(annot.shape[0] for annot in annots)
 
@@ -195,6 +196,7 @@ def collater(data):
         for idx, annot in enumerate(annots):
             if annot.shape[0] > 0:
                 annot_padded[idx, :annot.shape[0], :] = annot
+                
     else:
         annot_padded = torch.ones((len(annots), 1, 5)) * -1
 
