@@ -131,6 +131,14 @@ To train the TyNet, you can edit the training pipeline such as learning rate sch
 ### Optimizer
 
  I have implemented 4 optimizers in this repository, Adam, AdamW, SGD and ASGD. You can choose one of them by changing `training: optimizer:` in `training.yaml.` file.
+ 
+### Learning Rate Scheduler
+
+There are 3 learning rate schedulers in this repository, cosine, multistep_lr and cosine_annealing. You can choose one of them by changing `training: lr_scheduler:` in `training.yaml.` file.
+
+### Validation
+
+There is also a validation frequency that indicates the time when the model validates. It is set to 1, thath means every epoch, the validation phase occurs.
 
 ## Testing and Evaluation
 
