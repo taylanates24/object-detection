@@ -126,6 +126,12 @@ This is my implementation of bounding box classification head. Similarly, each `
 
 ## Training
 
+To train the TyNet, you can edit the training pipeline such as learning rate scheduler, optimizer and so on.
+
+### Optimizer
+
+ I have implemented 4 optimizers in this repository, Adam, AdamW, SGD and ASGD. You can choose one of them by changing `training: optimizer:` in `training.yaml.` file.
+
 ## Testing and Evaluation
 
 Coming soon
