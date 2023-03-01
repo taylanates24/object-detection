@@ -57,7 +57,7 @@ pip3 install -r requirements.txt
 
 6 - Run 
 ```
-python train.py
+python3 train.py --train_cfg training.yaml --dataset_cfg coco.yml
 ```
 to start training the model.
 
