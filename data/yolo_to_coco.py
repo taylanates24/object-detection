@@ -17,7 +17,7 @@ if __name__ == '__main__':
                         default='/workspaces/object-detection/datasets/coco128/images/train2017', 
                         help='Yolo categories path')
     parser.add_argument('--coco_names', type=str, 
-                        default='/workspaces/object-detection/datasets/coco128/coco.names', 
+                        default='/workspaces/object-detection/datasets/coco.names', 
                         help='COCO class names path')
     parser.add_argument('--out_file_name', type=str, 
                         default='coco128_train.json', 
