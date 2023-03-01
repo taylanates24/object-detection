@@ -2,10 +2,12 @@ import pytorch_lightning as pl
 import torch.nn as nn
 import torch
 from models.loss import FocalLoss
+from typing import Callable, List, Dict, Tuple
 
 class Detector(pl.LightningModule):
     
-    def __init__(self, model, scheduler, optimizer, loss=None):
+    def __init__(self, model: nn.Module, scheduler: Callable, optimizer: Callable, loss: Callable=None) -> None:
+
         super(Detector, self).__init__()
         
         self.model = model
@@ -15,15 +17,17 @@ class Detector(pl.LightningModule):
 
         if loss is None:
             self.loss = FocalLoss()
+            
         else:
             self.loss = loss
             
-    def forward(self, images):
-
+            
+    def forward(self, images: torch.tensor) -> Tuple[List, torch.tensor, torch.tensor, torch.tensor]:
 
         return self.model(images)
 
-    def training_step(self, train_batch, batch_idx):
+
+    def training_step(self, train_batch: Dict[str, torch.tensor], batch_idx: int) -> Dict[str, float]:
 
         images = train_batch['img']
         labels = train_batch['labels']
@@ -38,7 +42,7 @@ class Detector(pl.LightningModule):
 
         return {'loss': total_loss, 'cls_loss': cls_loss, 'reg_loss': reg_loss}
 
-    def training_epoch_end(self, outputs):
+    def training_epoch_end(self, outputs: List[Dict[str, torch.tensor]]) -> None:
         
         cls_losses = [x['cls_loss'] for x in outputs]
         reg_losses = [x['reg_loss'] for x in outputs]
@@ -52,7 +56,7 @@ class Detector(pl.LightningModule):
         self.log('train reg_loss', avg_train_reg_loss)
         self.log('train total_loss', avg_train_loss)
 
-    def validation_step(self, val_batch, batch_idx):
+    def validation_step(self, val_batch: Dict[str, torch.tensor], batch_idx: int) -> Dict[str, float]:
 
         images = val_batch['img']
         labels = val_batch['labels']
@@ -65,7 +69,7 @@ class Detector(pl.LightningModule):
 
         return {'loss':total_loss,  'cls_loss': cls_loss, 'reg_loss': reg_loss}
 
-    def validation_epoch_end(self, outputs):
+    def validation_epoch_end(self, outputs: List[Dict[str, torch.tensor]]) -> None:
 
         cls_losses = [x['cls_loss'] for x in outputs]
         reg_losses = [x['reg_loss'] for x in outputs]
@@ -95,7 +99,8 @@ class Detector(pl.LightningModule):
         pass
 
 
-    def configure_optimizers(self):
+    def configure_optimizers(self) -> List[Callable]:
+        
         optimizer = self.optimizer
         scheduler = self.scheduler
         
