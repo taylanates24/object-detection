@@ -33,7 +33,7 @@ cutout:
 
 training:
   image_path: '/workspaces/object-detection/datasets/coco128/images/train2017'
-  annotation_path: '/workspaces/object-detection/datasets/coco128/labels/train2017/coco_annotations/coco128_train.json'
+  annotation_path: '/workspaces/object-detection/datasets/coco128_train.json'
   image_size: 480
   normalize: True
   augmentations: ['imgaug', 'cutout']
@@ -41,7 +41,7 @@ training:
   shuffle: False
   num_workers: 0
   drop_last: True
-  optimizer: 'adam' # 'adam', 'sgd' or 'asgd'
+  optimizer: 'adam' # 'adam', 'adamw', 'sgd' or 'asgd'
   lr_scheduler: 'cosine' # 'cosine', 'multistep_lr', 'cosine_annealing'
   learning_rate: 0.001
   val_frequency: 1
@@ -49,7 +49,7 @@ training:
 
 validation:
   image_path: '/workspaces/object-detection/datasets/coco128/images/train2017'
-  annotation_path: '/workspaces/object-detection/datasets/coco128/labels/train2017/coco_annotations/coco128_train.json'
+  annotation_path: '/workspaces/object-detection/datasets/coco128_train.json'
   batch_size: 1
   shuffle: False
   num_workers: 0

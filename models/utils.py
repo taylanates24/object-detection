@@ -45,6 +45,8 @@ import math
 def get_optimizer(opt, model):
     if opt['optimizer'] == 'adam':
         return optim.Adam(model.parameters(), lr=opt['learning_rate'])
+    elif opt['optimizer'] == 'adamw':
+        return optim.AdamW(model.parameters(), lr=opt['learning_rate'])
     elif opt['optimizer'] == 'sgd':
         return optim.SGD(model.parameters(), lr=opt['learning_rate'], momentum=0.9)
     elif opt['optimizer'] == 'asgd':
