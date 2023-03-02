@@ -61,7 +61,7 @@ chmod +x get_coco128.sh
 After that, you have to convert the dataset format to COCO format by running the following code:
 
 ```
-python3 data/yolo_to_coco.py --yolo_annotations ../datasets/coco128/labels/train2017 --yolo_img ../datasets/coco128/images/train2017 --coco_names ../datasets/coco.names --out_file_name coco128_train.json --check True
+python3 data/yolo_to_coco.py --yolo_annotations /workspaces/object-detection/datasets/coco128/labels/train2017 --yolo_img /workspaces/object-detection/datasets/coco128/images/train2017 --coco_names /workspaces/object-detection/datasets/coco.names --out_file_name /workspaces/object-detection/datasets/coco128_train.json --check True
 ```
 
 5 - Modify the configuration file training.yaml to match your dataset, hyperparameters and data augmentations.
