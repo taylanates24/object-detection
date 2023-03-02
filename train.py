@@ -30,9 +30,9 @@ if __name__ == '__main__':
     with open(dataset_opt, 'r') as config:
         dataset_opt = yaml.safe_load(config)
 
-    model = TyNet(compound_coef=0, num_classes=len(dataset_opt['obj_list']),
-                                    ratios=eval(dataset_opt['anchors_ratios']), 
-                                    scales=eval(dataset_opt['anchors_scales']))
+    model = TyNet(num_classes=len(dataset_opt['obj_list']),
+                  ratios=eval(dataset_opt['anchors_ratios']), 
+                  scales=eval(dataset_opt['anchors_scales']))
 
     init_weights(model)
     model = model.cuda()
