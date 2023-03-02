@@ -9,6 +9,11 @@ from typing import List, Callable, Dict
 class Augmentations:
     
     def __init__(self, opt: Dict[str, str]) -> None:
+        """The augmentation class which applies geometric and color augmentations from imgaug library.
+
+        Args:
+            opt (Dict[str, str]): The configuration dictionary which has the values of augmentations.
+        """
 
         opt = opt['imgaug']
         
@@ -89,6 +94,12 @@ class Augmentations:
 class CopyPaste:
     
     def __init__(self, opt: Dict[str, str]) -> None:
+        """The customized version of Copy-Paste augmentation. 
+        The paper: Simple Copy-Paste is a Strong Data Augmentation Method for Instance Segmentation https://arxiv.org/abs/2012.07177
+
+        Args:
+            opt (Dict[str, str]): The configuration dictionary which has the values of augmentations.
+        """
 
         
         self.debug = False
@@ -280,6 +291,8 @@ class CopyPaste:
 
 
     def check_bbox_memory(self) -> None:
+        """Checks the holded bounding box memory. If the number of holded bounding boxes exceed some defined number, the excess ones are deleted.
+        """
         
         if len(self.boxes_w_labels) > self.bboxes_len:
 
@@ -288,11 +301,23 @@ class CopyPaste:
             self.boxes_w_labels = self.boxes_w_labels[diff:]
             
     def shuffle_bboxes(self) -> None:
+        """Shuffles the holded bounding boxes to be pasted.
+        """
         
         np.random.shuffle(self.boxes_w_labels)
 
 
     def get_bbox(self, img: np.ndarray, bboxes: np.ndarray, category_id: np.ndarray) -> np.ndarray:
+        """Crops the new bounding boxes from new image.
+
+        Args:
+            img (np.ndarray): The image.
+            bboxes (np.ndarray): The bounding boxes.
+            category_id (np.ndarray): The category id of each bounding boxes.
+
+        Returns:
+            np.ndarray: The cropped bounding boxes.
+        """
 
         cropped_bbox = []
 
@@ -304,6 +329,15 @@ class CopyPaste:
         return np.array(cropped_bbox, dtype=object)
 
     def crop_bbox(self, img: np.ndarray, bbox: np.ndarray) -> np.ndarray:
+        """Crops bounding boxes from the image.
+
+        Args:
+            img (np.ndarray): The image.
+            bbox (np.ndarray): Bounding boxes.
+
+        Returns:
+            np.ndarray: Cropped bounding boxes.
+        """
         
         x1 = int(bbox[0])
         y1 = int(bbox[1])
@@ -316,25 +350,25 @@ class CopyPaste:
 
 
 def calc_bbox_area(bboxes: np.ndarray) -> float:
-    """_summary_
+    """Calculates bounding box area.
 
     Args:
-        bboxes (np.ndarray): _description_
+        bboxes (np.ndarray): Bounding boxes.
 
     Returns:
-        float: _description_
+        float: Te area of bounding boxes.
     """
     
     return np.max((bboxes[:,2] - bboxes[:,0]) * (bboxes[:,3] - bboxes[:,1]))
 
 def calc_img_area(images: np.ndarray) -> float:
-    """_summary_
+    """Calculates cropped image areas.
 
     Args:
-        images (np.ndarray): _description_
+        images (np.ndarray): The cropped bounding boxes.
 
     Returns:
-        float: _description_
+        float: The area
     """
     
     max_area = 0
@@ -351,7 +385,15 @@ def calc_img_area(images: np.ndarray) -> float:
     
     
 def inter_over_area(bboxes1: np.ndarray, bboxes2: np.ndarray) -> float:
+    """Calculates The intersection areas over the first bounding boxes area in a vectorized way.
 
+    Args:
+        bboxes1 (np.ndarray): The first bounding boxes.
+        bboxes2 (np.ndarray): The second bounding boxes.
+
+    Returns:
+        float: The intersection over area matrix.
+    """
     x11, y11, x12, y12 = np.split(bboxes1, 4, axis=1)
     x21, y21, x22, y22 = np.split(bboxes2, 4, axis=1)
     xA = np.maximum(x11, np.transpose(x21))
@@ -368,6 +410,12 @@ def inter_over_area(bboxes1: np.ndarray, bboxes2: np.ndarray) -> float:
 class CutOut:
 
     def __init__(self, opt: Dict[str, str]) -> None:
+        """The customized cutout augmentation. 
+        The paper: Improved Regularization of Convolutional Neural Networks with Cutout https://arxiv.org/abs/1708.04552
+
+        Args:
+            opt (Dict[str, str]): The configuration dictionary which has the values of augmentations.
+        """
 
         self.debug = False
         opt = opt['cutout']
@@ -450,6 +498,14 @@ class CutOut:
 
 
 def get_augmentations(opt: Dict[str, str]) -> List[Callable]:
+    """Gets the augmentations from the config file.
+
+    Args:
+        opt (Dict[str, str]):  The configuration dictionary which has the names of augmentations.
+
+    Returns:
+        List[Callable]: The list of objects of augmentations.
+    """
 
     augmentations = []
     aug_names = opt['training']['augmentations']

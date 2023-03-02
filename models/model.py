@@ -7,6 +7,13 @@ from typing import List, Callable, Tuple
 
 class TyNet(nn.Module):
     def __init__(self, num_classes: int=80, backbone: str='tf_efficientnet_lite0.in1k', out_size: int=64, **kwargs) -> None:
+        """The object detector which has a changable backbone structure.
+
+        Args:
+            num_classes (int, optional): Number of classes in the dataset. Defaults to 80.
+            backbone (str, optional): The backbone name from timm module. Defaults to 'tf_efficientnet_lite0.in1k'.
+            out_size (int, optional): The size of the output of head layer. Defaults to 64.
+        """
         
         super(TyNet, self).__init__()
 
@@ -40,6 +47,13 @@ class TyNet(nn.Module):
 
 class TyNeck(nn.Module):
     def __init__(self, layers: List[int]=[512, 1024, 2048], out_size: int=64, procedure: List[int]=[3, 4]) -> None:
+        """The FPN neck function which uses addition as fusion function.
+
+        Args:
+            layers (List[int], optional): The list of number of channels in FPN outputs. Defaults to [512, 1024, 2048].
+            out_size (int, optional): The size of the output of head layer Defaults to 64.
+            procedure (List[int], optional): The number of layers of ScalableCSPResBlocks that applied to out of FPN 2 and 3 layers. Defaults to [3, 4].
+        """
         super(TyNeck, self).__init__()
 
         self.out_layer1 = Conv(in_ch=layers[-1], out_ch=out_size * 2, k_size=3, s=1, p=1)
@@ -59,6 +73,15 @@ class TyNeck(nn.Module):
         self.act = nn.SiLU()
 
     def upsample_add(self, x: torch.tensor, y: torch.tensor) -> torch.tensor:
+        """Fusion function of FPN layer. It upsamples the nth FPN output and add it to the (n+1)th FPN output.
+
+        Args:
+            x (torch.tensor): Input layer comas from nth layer of FPN.
+            y (torch.tensor): Input layer comas from (n+1)th layer of FPN.
+
+        Returns:
+            torch.tensor: Output
+        """
 
         y = self.act(self.upconv_dict[str(y.shape[1])](y))
 
@@ -88,6 +111,16 @@ class TyHead(nn.Module):
                  num_anchors: int=9, 
                  num_classes: int=80, 
                  num_layers: int=3, **kwargs) -> None:
+        """The head class of the model. It applies classifier and bounding box regression to the neck output.
+
+        Args:
+            out_size (int): The output size of regression and classification.
+            anchor_scale (float): The scale of anchors, depends on the target bounding box size of the dataset.
+            pyramid_levels (List[int]): The pyramid levels comes from FPN.
+            num_anchors (int, optional): Number of anchors. Defaults to 9.
+            num_classes (int, optional): Number of classes in the dataset. Defaults to 80.
+            num_layers (int, optional): Number of layers in classifier and regressor. Defaults to 3.
+        """
         super(TyHead, self).__init__()
 
         self.regressor = Regressor(in_channels=out_size, num_anchors=num_anchors, num_layers=num_layers)
@@ -109,6 +142,13 @@ class TyHead(nn.Module):
 class Regressor(nn.Module):
 
     def __init__(self, in_channels: int, num_anchors: int=9, num_layers: int=3) -> None:
+        """The bounding box regression of the model. It gives a 1xNx4 shape output. The 4 corresponds to the coordinates of the bounding box.
+
+        Args:
+            in_channels (int): Input channel size.
+            num_anchors (int, optional): Number of anchors. Defaults to 9.
+            num_layers (int, optional): Number of layer in regressor. Defaults to 3.
+        """
         super(Regressor, self).__init__()
 
         self.conv_list = nn.Sequential(
@@ -139,6 +179,14 @@ class Regressor(nn.Module):
 class Classifier(nn.Module):
 
     def __init__(self, in_channels: int, num_anchors: int, num_classes:int, num_layers:int=3) -> None:
+        """The bounding box regression of the model. It gives a 1xNxnum_classes shape output, N class probabilities for each class.
+        
+        Args:
+            in_channels (int): Input channel size.
+            num_anchors (int, optional): Number of anchors. Defaults to 9.
+            num_classes (int): Number of classes in the dataset.
+            num_layers (int, optional): Number of layer in regressor. Defaults to 3.
+        """
         super(Classifier, self).__init__()
 
         self.num_anchors = num_anchors
@@ -177,6 +225,12 @@ class Classifier(nn.Module):
 class ScalableCSPResBlock(nn.Module):
 
     def __init__(self, in_ch: int=512, num_basic_layers: int=1) -> None:
+        """The scalable residual block with amplemented by using CSPNet. It is more accurate and faster than traditional resblock thanks to cross partial block.
+
+        Args:
+            in_ch (int, optional): The input size of the block. Defaults to 512.
+            num_basic_layers (int, optional): Number of basic layer applied to the half of the frame. Defaults to 1.
+        """
         super(ScalableCSPResBlock, self).__init__()
 
         self.conv1 = nn.Conv2d(in_channels=in_ch, out_channels=in_ch * 2, kernel_size=3, stride=1, padding=1)
@@ -213,6 +267,14 @@ class ScalableCSPResBlock(nn.Module):
 
 class BasicBlock(nn.Module):
     def __init__(self, in_channels: int, out_channels: int, stride: int=1, downsample: bool=False) ->None:
+        """The basic block of residual networks.
+
+        Args:
+            in_channels (int): Input size.
+            out_channels (int): Output size.
+            stride (int, optional): The stride of the first convolution. Defaults to 1.
+            downsample (bool, optional): Decides of downsample is applied. Defaults to False.
+        """
         super(BasicBlock, self).__init__()
 
         self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=(3, 3), stride=stride, padding=(1, 1), bias=False)
@@ -251,6 +313,18 @@ class BasicBlock(nn.Module):
 
 class Conv(nn.Module):
     def __init__(self, in_ch: int, out_ch: int, k_size: int=3, s: int=1, p: int=0, act: Callable=nn.Mish(), norm: bool=True, bias: bool=True) -> None:
+        """The conv2d with activation and normalization.
+
+        Args:
+            in_ch (int): Input channel size
+            out_ch (int): Output channel size
+            k_size (int, optional): Kernel size of Conv2d. Defaults to 3.
+            s (int, optional): Stride of Conv2d. Defaults to 1.
+            p (int, optional): Padding of Conv2d. Defaults to 0.
+            act (Callable, optional): Activation function. Defaults to nn.Mish().
+            norm (bool, optional): Decides if normalization applied. Defaults to True.
+            bias (bool, optional): Bias boolean of Conv2d. Defaults to True.
+        """
         super(Conv, self).__init__()
 
         self.norm = norm
@@ -275,6 +349,15 @@ class Conv(nn.Module):
 class ConvBlock(nn.Module):
 
     def __init__(self, in_channel: int, out_channel: int, norm_1: bool, norm_2: bool, activation: bool) -> None:
+        """The 3x3 and 1x1 (actually any size) convolution block in regressor and classifier.
+
+        Args:
+            in_channel (int): Input channel size.
+            out_channel (int): Output channel size.
+            norm_1 (bool): Decides if normalization is applied to the first conv block.
+            norm_2 (bool): Decides if normalization is applied to the Second conv block.
+            activation (bool): Decides if activation is applied to the end of the block.
+        """
         super().__init__()
 
         self.activation = activation

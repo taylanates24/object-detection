@@ -7,7 +7,6 @@ from pycocotools.coco import COCO
 import os
 import cv2
 import numpy as np
-from data.augmentations import Augmentations, CopyPaste, CutOut
 from data.process_box import x1y1_to_xcyc, x1y1wh_to_xyxy, xyxy_to_x1y1wh, normalize_bboxes, resize_bboxes, adjust_bboxes
 from typing import List, Callable, Dict, Tuple
 
@@ -20,6 +19,15 @@ class CustomDataset(Dataset):
                  normalize: bool=True, 
                  augmentations: List[Callable]=None
                  ) -> None:
+        """A custom COCO dataset.
+
+        Args:
+            image_path (str): The path of the images folder.
+            annotation_path (str): The path of the annotations folder.
+            image_size (int, optional): The size of the image tobe returned. Defaults to 640.
+            normalize (bool, optional): Decides if normalization is applied to the images. Defaults to True.
+            augmentations (List[Callable], optional): The list of augmentation objects to be applied. Defaults to None.
+        """
 
         super(CustomDataset, self).__init__()
         
@@ -93,6 +101,14 @@ class CustomDataset(Dataset):
     
     
     def load_image(self, img_id: int) -> Tuple[np.ndarray, float]:
+        """Loads the images
+
+        Args:
+            img_id (int): The image id from COCO dataset.
+
+        Returns:
+            Tuple[np.ndarray, float]: Image and the ratio of resizen image and the original image.
+        """
         
         img_path = self.coco.loadImgs(img_id)[0]['file_name']
         img = cv2.imread(os.path.join(self.image_path, img_path))
@@ -109,6 +125,15 @@ class CustomDataset(Dataset):
         
         
     def load_labels(self, image_id: int, ratio: float) -> np.ndarray:
+        """Loads the labels.
+
+        Args:
+            image_id (int): The image ID from COCO dataset.
+            ratio (float): The ratio of the resized image and the original image, which is used to resize the bounding box coordinates.
+
+        Returns:
+            np.ndarray: The labels.
+        """
         
         annotations = self.coco.imgToAnns[image_id]
         
@@ -135,6 +160,16 @@ class CustomDataset(Dataset):
     
     
     def letter_box(self, img: np.ndarray, size: int) -> Tuple[np.ndarray, float, float]:
+        """Applies letterbox to the image so that a rectangular shape is obtained.
+
+        Args:
+            img (np.ndarray): The image.
+            size (int): The size of the final image.
+
+        Returns:
+            Tuple[np.ndarray, float, float]: The letterbox image, the width difference and 
+                                             the height difference that will be used to adjust bounding boxes of the image.
+        """
         
         box = np.full([size, size, img.shape[2]], 127)
         h, w = img.shape[:2]
@@ -153,6 +188,11 @@ class CustomDataset(Dataset):
         
         
     def get_statistics(self) -> Tuple[List[float]]:
+        """Calculates the mean and the standard deviation of the dataset. They are then jused to normalize each image.
+
+        Returns:
+            Tuple[List[float]]: The mean and the standard deviation.
+        """
         
         transform = transforms.Compose([
             transforms.ToTensor()
@@ -180,6 +220,14 @@ class CustomDataset(Dataset):
 
 
 def collater(data: List[Dict[str, torch.tensor]]) -> Dict[str, torch.tensor]:
+    """The collation function of the dataset which aggregates the images and adjust them to the model.
+
+    Args:
+        data (List[Dict[str, torch.tensor]]): The list of dict of images, labels and the ratios.
+
+    Returns:
+        Dict[str, torch.tensor]: The batched images, labels and ratios.
+    """
     
     imgs = [s['img'] for s in data]
     annots = [torch.tensor(s['labels']) for s in data]

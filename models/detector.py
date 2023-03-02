@@ -7,6 +7,14 @@ from typing import Callable, List, Dict, Tuple
 class Detector(pl.LightningModule):
     
     def __init__(self, model: nn.Module, scheduler: Callable, optimizer: Callable, loss: Callable=None) -> None:
+        """The detector class that is used by pytorch lightning.
+
+        Args:
+            model (nn.Module): The object detector class object.
+            scheduler (Callable): Learning rate scheduler function.
+            optimizer (Callable): Optimizer function.
+            loss (Callable, optional): Loss function. Defaults to None.
+        """
 
         super(Detector, self).__init__()
         
@@ -23,6 +31,7 @@ class Detector(pl.LightningModule):
             
             
     def forward(self, images: torch.tensor) -> Tuple[List, torch.tensor, torch.tensor, torch.tensor]:
+
 
         return self.model(images)
 
@@ -100,6 +109,11 @@ class Detector(pl.LightningModule):
 
 
     def configure_optimizers(self) -> List[Callable]:
+        """The function that gets the optimizer and learning rate scheduler.
+
+        Returns:
+            List[Callable]: List of optimizer and scheduler.
+        """
         
         optimizer = self.optimizer
         scheduler = self.scheduler
