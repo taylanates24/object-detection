@@ -138,7 +138,7 @@ There are 3 learning rate schedulers in this repository, cosine, multistep_lr an
 
 ### Validation
 
-There is also a validation frequency that indicates the time when the model validates. It is set to 1, thath means every epoch, the validation phase occurs.
+There is also a validation frequency that indicates the time when the model validates. It is set to 1, that means every epoch, the validation phase occurs.
 
 ## Testing and Evaluation
 
