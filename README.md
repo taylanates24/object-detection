@@ -93,7 +93,7 @@ It is my implementation of "Improved Regularization of Convolutional Neural Netw
 
 #### Copy Paste
 
-It is my implementation of "Simple Copy-Paste is a Strong Data Augmentation Method for Instance Segmentation" (https://arxiv.org/abs/2012.07177) paper with some improvements. In this implementation, you can apply bounding box augmentations by changing copy_paste: box_augments: variable in ```training.yaml``` file. The bounding box augmentations only applied to the number of pasted boxes and at most 1 augmentation is applied at one time. You can also change the pasted boxes by changing `pasted_bbox_number` value in `training.yaml`
+It is my implementation of "Simple Copy-Paste is a Strong Data Augmentation Method for Instance Segmentation" (https://arxiv.org/abs/2012.07177) paper with some improvements. In this implementation, you can apply bounding box augmentations by changing copy_paste: box_augments: variable in ```training.yaml``` file. The bounding box augmentations only applied to the pasted boxes and at most 1 augmentation is applied at one time. You can also change the pasted boxes by changing `pasted_bbox_number` value in `training.yaml`
 
 ## Model Architecture
 
