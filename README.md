@@ -85,7 +85,7 @@ TyNet uses the COCO dataset format for annotations. The data/coco_dataset.py scr
 
 I add some geometric and color augmentations from imgaug library. You can chance the number of augmentations in each iteration, the values and the variation of the augmentations by changing ```imgaug``` values in ```training.yaml``` file.
 
-For example if you want to use random horizontal flip and scale only, the num_aug should be 2, fliplr should be the probability if the random horizontal flip augmentation, scale should be a list of range and all the other imgaug augmentations should be ```null``` The `num_aug` is the number of augmentations, which is chosen randomly from all augmentations,  on each iteration.
+For example if you want to use random horizontal flip and scale only, the num_aug should be 2, fliplr should be the probability if the random horizontal flip augmentation, scale should be a list of range and all the other imgaug augmentations should be ```null```. The `num_aug` is the number of augmentations, which is chosen randomly from all augmentations,  on each iteration.
 
 #### CutOut
 
@@ -99,7 +99,7 @@ It is my implementation of "Simple Copy-Paste is a Strong Data Augmentation Meth
 
 ### Backbone
 
- As a backbone, I implement a changable structure. You can use whatever backbone in the `timm` library, pre-trained or not. For example, the list of pre-trained backbones can be obtained by using the folloving code:
+ As a backbone, I implemented a changable structure. You can use whatever backbone in the `timm` library, pre-trained or not. For example, the list of pre-trained backbones can be obtained by using the folloving code:
  
 ```
 import timm
