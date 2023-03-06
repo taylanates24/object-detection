@@ -1,0 +1,56 @@
+imgaug: # write the desired values, and append the probability, e.g. [val1, val2, probability] or null if that augmentation won't be used.
+  num_aug: 3 # number of augmentations that is randomly chosen from list at each iteration.
+  fliplr: 0.5 # 0.5
+  scale: [0.95, 1.05] # [0.95, 1.05]
+  brightness: [-10, 10] # [-10, 10]
+  saturation: [-10, 10] # [-10, 10] 
+  hue: [-10, 10] # [-10, 10]
+  add_grayscale: [0, 0.2] # [0, 0.2]
+  motion_blur: [3, 5] # [3, 5]
+  contrast: [0.8, 1.2] # [0.8, 1.2]
+  translate: [[-0.1, 0.1], [-0.1, 0.1]] # [[-0.1, 0.1], [-0.1, 0.1]]
+  rotate: [-5, 5] # [-5, 5]
+  shear: [-5, 5] # [-5, 5]
+
+copy_paste: # write the desired values or null if that augmentation won't be used.
+  bboxes_memory: 20
+  pasted_bbox_number: 4
+  augment_box: True
+  box_augments:
+    fliplr: 1.0 # 0.5
+    brightness: [-10, 10] # [-10, 10]
+    saturation: null #[-10, 10] # [-10, 10]
+    add_grayscale: [0, 0.2] # [0, 0.2]
+    hue: null #[-10, 10] # [-10, 10]
+    contrast: null #[0.8, 1.2] # [0.8, 1.2]
+    motion_blur: null # [3, 5] # [3, 5]
+    threshold: 0.5 # if the intersextion of area of labels and pasted bboxes is exceeds the threshold, that bbox is simply dropped out.
+
+cutout:
+  fill_type: 1 # the index of ['gaussian_noise', 'random_color', 'white', 'black', 'gray']
+  percentages: [0.15, 0.2, 0.25] # number of percentage is the number of cutout boxes, the value of percentage is the percentage of cutout boxes wrt the image size
+  threshold: 0.5 # if the intersextion of area of labels and cutout bboxes is exceeds the threshold, that bbox is simply dropped out.
+
+training:
+  image_path: '/workspaces/object-detection/datasets/coco128/images/train2017'
+  annotation_path: '/workspaces/object-detection/datasets/coco128_train.json'
+  image_size: 480
+  normalize: True
+  augmentations: ['imgaug', 'cutout']
+  batch_size: 1
+  shuffle: False
+  num_workers: 0
+  drop_last: True
+  optimizer: 'adam' # 'adam', 'adamw', 'sgd' or 'asgd'
+  lr_scheduler: 'cosine' # 'cosine', 'multistep_lr', 'cosine_annealing'
+  learning_rate: 0.001
+  val_frequency: 1
+  epochs: 500
+
+validation:
+  image_path: '/workspaces/object-detection/datasets/coco128/images/train2017'
+  annotation_path: '/workspaces/object-detection/datasets/coco128_train.json'
+  batch_size: 1
+  shuffle: False
+  num_workers: 0
+  drop_last: True
