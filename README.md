@@ -5,7 +5,7 @@
 
 ## Project Structure
 ```bash
-project/
+object-detection/
 ├── README.md
 ├── LICENSE
 ├── Dockerfile
