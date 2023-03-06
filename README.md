@@ -143,6 +143,21 @@ There are 3 learning rate schedulers in this repository, cosine, multistep_lr an
 
 There is also a validation frequency that indicates the time when the model validates. It is set to 1, that means every epoch, the validation phase occurs.
 
+### Logging
+
+Pytorch-lightning support a couple of logger, I chose TensorBoard as logger. After start the training, you can observe the logs by opening a new bash terminal and type the following code:
+
+```
+tensorboard --bind_all --logdir tb_logger
+```
+After typing this command, the tensorboard screen will be ready in localhost soon.
+
+The `logdir` is default logging folder of this repository. You can change it by changing the
+```
+logger = TensorBoardLogger("tb_logs", name="my_model")
+```
+line in `train.py` file.
+
 ## Testing and Evaluation
 
 Coming soon
