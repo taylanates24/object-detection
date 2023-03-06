@@ -112,7 +112,7 @@ As a neck, I designed an FPN structure, which uses addition as fusion type.
 
 ![fpn_arch (copy) drawio](https://user-images.githubusercontent.com/66252663/221975984-fec13a49-b66b-4f35-b837-78278b434868.png)
 
-Additionally, I desing a simple but effective and computationally cheap, scaleble block: ScalableCSPResBlock. It is scalable, and designed using CSPNet on top of Resnet.
+Additionally, I desinged a simple but effective and computationally cheap, scaleble block: ScalableCSPResBlock. It is scalable, and designed using CSPNet on top of Resnet.
 
 ![scalablecspresblock (1)](https://user-images.githubusercontent.com/66252663/221976374-8571cdd7-8062-4966-8d93-6facdb350718.jpg)
 
