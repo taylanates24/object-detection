@@ -6,9 +6,12 @@
 ## Project Structure
 ```bash
 object-detection/
-├── README.md
-├── LICENSE
 ├── Dockerfile
+├── LICENSE
+├── README.md
+├── coco.yml
+├── get_coco128.sh
+├── requirements.txt
 ├── train.py
 ├── training.yaml
 ├── data/
