@@ -165,3 +165,6 @@ Coming soon
 ## Conclusion and Future Work
 
 The head part of the model will be written by using CSPNet to have a more accurate and fast head part.
+
+Yo can read my blog to have more insights about how to design a custom object detector from scratch. The first part is: [How To Design An Object Detector Part 1: Choosing A Backbone](https://medium.com/@taylan.ates417311/how-to-design-an-object-detector-part-1-choosing-a-backbone-5e625854cb7d)
+The other parts will be available soon.
