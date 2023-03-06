@@ -148,11 +148,11 @@ There is also a validation frequency that indicates the time when the model vali
 Pytorch-lightning supports a couple of loggers, in this repository, TensorBoard is chosen as logger. After training starts, you can observe the logs by opening a new bash terminal and type the following code:
 
 ```
-tensorboard --bind_all --logdir tb_logger
+tensorboard --bind_all --logdir tb_logs
 ```
 After typing this command, the tensorboard screen will be ready in localhost soon.
 
-The `logdir` is default logging folder of this repository. You can change it by changing the
+The `tb_logs` is default logging folder of this repository. You can change it by changing the
 ```
 logger = TensorBoardLogger("tb_logs", name="my_model")
 ```
