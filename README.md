@@ -83,7 +83,7 @@ TyNet uses the COCO dataset format for annotations. The data/coco_dataset.py scr
 
 #### imgaug
 
-I add some geometric and color augmentations from imgaug library. You can chance the number of augmentations in each iteration, the values and the variation of the augmentations by changing ```imgaug``` values in ```training.yaml``` file.
+I add some geometric and color augmentations from imgaug library. You can change the number of augmentations in each iteration, the values and the variation of the augmentations by changing ```imgaug``` values in ```training.yaml``` file.
 
 For example if you want to use random horizontal flip and scale only, the num_aug should be 2, fliplr should be the probability if the random horizontal flip augmentation, scale should be a list of range and all the other imgaug augmentations should be ```null```. The `num_aug` is the number of augmentations, which is chosen randomly from all augmentations,  on each iteration.
 
