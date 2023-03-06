@@ -145,7 +145,7 @@ There is also a validation frequency that indicates the time when the model vali
 
 ### Logging
 
-Pytorch-lightning support a couple of logger, I chose TensorBoard as logger. After start the training, you can observe the logs by opening a new bash terminal and type the following code:
+Pytorch-lightning supports a couple of loggers, in this repository, TensorBoard is chosen as logger. After training starts, you can observe the logs by opening a new bash terminal and type the following code:
 
 ```
 tensorboard --bind_all --logdir tb_logger
