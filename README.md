@@ -89,7 +89,7 @@ For example if you want to use random horizontal flip and scale only, the num_au
 
 #### CutOut
 
-It is my implementation of "Improved Regularization of Convolutional Neural Networks with Cutout" (https://arxiv.org/abs/1708.04552) paper with some improvements. In my implementation, you can change the filled boxes which cutted out. You can fill it with gaussian noise, random colors, and white, black, and gray boxes to the cutting area. You can also change the number of cutouts and their scale with respect to the height of the image by changing `cutout` `percentages` values in the `training.yaml` file. The lenght of `percentages` is the number of cutting boxes.
+It is my implementation of "Improved Regularization of Convolutional Neural Networks with Cutout" (https://arxiv.org/abs/1708.04552) paper with some improvements. In my implementation, you can change the filled boxes which cutted out. You can fill it with gaussian noise, random colors, white, black, and gray boxes to the cutting area. You can also change the number of cutouts and their scale with respect to the height of the image by changing `cutout` `percentages` values in the `training.yaml` file. The lenght of `percentages` is the number of cutting boxes.
 
 #### Copy Paste
 
